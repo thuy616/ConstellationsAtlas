@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>3D Starry Night - Explore the Universe</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            font-family: Monospace;
+            background-color: #f0f0f0;
+            margin: 0px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <script src="three/three.min.js"></script>
+    <script src="js/renderers/CanvasRenderer.js"></script>
+    <script src="js/stats.min.js"></script>
+
+    <script>
+        var container, stats;
+        var camera, scene, renderer;
+        var starSource = "data/stars.json";
+        var constellationSource = "data/constellations.json";
+        var scale = 30;
+
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+
+        init(scale);
+        render();
+
+        // read stars coordinates from stars.json
+        function init(scaleFactor) {
+            container = document.createElement( 'div' );
+            document.body.appendChild( container );
+            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 100000000 );
+            camera.position.set(-0.2, 0, 0);
+
+            scene = new THREE.Scene();
+
+            var particles;
+            var geometry = new THREE.Geometry();
+
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.onreadystatechange = function() {
+                if (httpRequest.readyState === 4) {
+                    //parse JSON data
+                    var stars = JSON.parse(httpRequest.responseText);
+
+                    var colors = [];
+                    var colorsh = [];
+                    var lumsh = [];
+
+                    stars.forEach(function(star, i) {
+                        var pX = star.pos[0] * scaleFactor,
+                                pY = star.pos[1] * scaleFactor,
+                                pZ = star.pos[2] * scaleFactor;
+                        var vertex = new THREE.Vector3(pX, pY, pZ);
+                        geometry.vertices.push(vertex);
+
+                        colors[i] = new THREE.Color();
+                        var int = star.color;
+                        colors[i].setRGB(int[0]/255, int[1]/255, int[2]/255);
+                        colorsh[i] = [int[0]/255, int[1]/255, int[2]/255];
+                        lumsh[i] = Math.pow(star.luminosity, 0.25);
+
+                        //TODO: add label
+                    });
+
+                    geometry.colors = colors;
+
+                    var starMaterial = new THREE.ParticleSystemMaterial( {
+                        uniforms: {
+                            cutoff: { type: 'f', value: 1}
+                        },
+                        attributes: {
+                            color: { type: 'v3', value: colorsh },
+                            luminosity: { type: 'f', value: lumsh }
+                        },
+                        //vertexShader:   document.getElementById('vertexshader').textContent,
+                        //fragmentShader: document.getElementById('fragmentshader').textContent,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending,
+                        transparent: true,
+                        depthTest: true
+                    });
+
+                    particles = new THREE.ParticleSystem(geometry, starMaterial);
+                    scene.add(particles);
+                }
+            }
+
+            /*
+            * DRAW
+            * CONSTELLATION
+            * CODE
+            */
+
+            var mat = new THREE.LineBasicMaterial({
+                color: '#40e0d0'
+            });
+
+            var httpRequest2 = new XMLHttpRequest();
+            httpRequest2.onreadystatechange = function() {
+                if (httpRequest2.readyState === 4) {
+                    var data = JSON.parse(httpRequest2.responseText);
+                    console.log(data);
+                    data.forEach(function (c) {
+                        //
+                        var constellations = c.stars;
+                        var ppX = constellations[0][0].x * scaleFactor,
+                                ppY = constellations[0][0].y * scaleFactor,
+                                ppZ = constellations[0][0].z * scaleFactor;
+
+                        var pos = new THREE.Vector3( ppX, ppY, ppZ);
+
+                        var name = c.abbr;
+                        if (c.hasOwnProperty('name')) {
+                            name = c.name;
+                        }
+
+                        constellations.forEach(function (stars) {
+                            var geometry = new THREE.Geometry();
+                            stars.forEach(function (star) {
+                                geometry.vertices.push(
+                                        new THREE.Vector3(
+                                                star.x * scaleFactor,
+                                                star.y * scaleFactor,
+                                                star.z * scaleFactor));
+                            });
+                            var connection = new THREE.Line(geometry, mat);
+                            scene.add(connection);
+                        });
+                    });
+                    alert("constellations drawn");
+                }
+            }
+
+            httpRequest.open("GET", starSource);
+            httpRequest.send();
+
+            httpRequest2.open("GET", constellationSource);
+            httpRequest2.send();
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setClearColor( 0x000 ); // black background
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            container.appendChild( renderer.domElement );
+
+            // Lights
+            var light = new THREE.PointLight('#FFFFFF', 1.5);
+            light.position.set(0, 0, 0.3);
+            scene.add(light);
+            var ambient = new THREE.AmbientLight('#292725');
+            scene.add(ambient);
+
+            // Universe Sphere
+            var sphereGeom =  new THREE.SphereGeometry(9000000, 32, 16);
+            var material = new THREE.MeshBasicMaterial({
+                map: THREE.ImageUtils.loadTexture( 'images/milkyway_pan.jpg' ),
+                transparent: false,
+                side: THREE.BackSide
+            });
+            var universe = new THREE.Mesh(sphereGeom.clone(), material);
+            universe.position.set(0, 0, 0);
+            scene.add(universe);
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            container.appendChild( stats.domElement );
+
+            window.addEventListener( 'resize', onWindowResize, false );
+        }
+
+        function onWindowResize() {
+
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize( window.innerWidth, window.innerHeight );
+
+        }
+
+        function render() {
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+            stats.update();
+        }
+    </script>
+
+</body>
+</html>
