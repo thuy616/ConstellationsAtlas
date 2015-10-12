@@ -51,7 +51,7 @@ var Markers = {
                 item.text.style.display = 'inline-block';
             }
         }
-    },
+    }
 };
 
 var to2DPlane = function(marker, v3, camera) {
