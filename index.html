@@ -294,7 +294,7 @@
 
             renderer.render( scene, camera );
 
-            Markers.update(camera);
+            updateMarkers(Markers.markers, camera);
             stats.update();
         }
     </script>
