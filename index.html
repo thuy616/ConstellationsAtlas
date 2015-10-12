@@ -4,20 +4,13 @@
     <title>3D Starry Night - Explore the Universe</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <style>
-        body {
-            font-family: Monospace;
-            background-color: #f0f0f0;
-            margin: 0px;
-            overflow: hidden;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id ="container"></div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
     <script src="three/three.min.js"></script>
-    <script src="js/renderers/CanvasRenderer.js"></script>
+    <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
     <script src="js/controls/OrbitControls.js"></script>
     <script src="js/marker.js"></script>
@@ -27,7 +20,7 @@
         var cameraControls;
         var starSource = "data/stars.json";
         var constellationSource = "data/constellations.json";
-        var scale = 30;
+        var scale = 40;
         var mouse = new THREE.Vector2();
         var INTERSECTED;
 
@@ -36,7 +29,7 @@
         var constellationData = new Object();
 
         var lineCount = 0;
-        var STAR_SIZE = 20;
+        var STAR_SIZE = 15;
         var LINE_SIZE = 1;
 
         var vertexShader = $('#vertexshader');
@@ -49,8 +42,10 @@
         function init(scaleFactor) {
             container = document.createElement( 'div' );
             document.body.appendChild( container );
-            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 100000000 );
-            camera.position.set(-50, 50, 0);
+            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 100000000000 );
+
+            camera.position.set(-0.5, 0, 0);
+            camera.lookAt(new THREE.Vector3(-0, -50, 0));
 
             scene = new THREE.Scene();
 
@@ -85,9 +80,9 @@
 
                     geometry.colors = colors;
 
-                    var starMaterial = new THREE.ParticleBasicMaterial({
+                    var starMaterial = new THREE.PointsMaterial({
                         color: 0xffffff,
-                        size: 20,
+                        size: STAR_SIZE,
                         map: THREE.ImageUtils.loadTexture(
                                 "images/particle.png"
                         ),
@@ -112,7 +107,7 @@
                     });
                     */
 
-                    particles = new THREE.ParticleSystem(geometry, starMaterial);
+                    particles = new THREE.Points(geometry, starMaterial);
                     scene.add(particles);
                 }
             }
@@ -125,8 +120,7 @@
             */
 
             var mat = new THREE.LineBasicMaterial({
-                color: '#40e0d0',
-                size: LINE_SIZE
+                color: '#40e0d0'
             });
 
             /*
@@ -163,7 +157,7 @@
 
                         //TODO: add marker
                         // set marker text color: white, do this in css
-                        // Markers.addMarker(pos, name);
+                        Markers.addMarker(pos, name, camera);
 
                         for (var i=0; i<stars.length; i++) {
                             var geometry = new THREE.Geometry();
@@ -230,6 +224,7 @@
             // CONTROLS
             cameraControls = new THREE.OrbitControls( camera );
             cameraControls.target.set( 0, 0, 0 );
+
         }
 
         function onWindowResize() {
@@ -296,8 +291,10 @@
             }
             */
 
+
             renderer.render( scene, camera );
 
+            Markers.update(camera);
             stats.update();
         }
     </script>
