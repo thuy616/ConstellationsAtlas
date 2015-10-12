@@ -25,21 +25,6 @@ var Markers = {
         return l.text;
     }
 
-<<<<<<< Updated upstream
-        for (var i=0; i<this.markers.length; i++) {
-            var item = this.markers[i];
-            var newPos = this.toXYCoords(item.v, camera);
-            item.text.style.top  = newPos.y + 'px';
-            item.text.style.left = newPos.x + 'px';
-            if(newPos.z > 1.0){
-                item.text.style.display = 'none';
-            } else {
-                item.text.style.display = 'inline-block';
-            }
-        }
-    }
-=======
->>>>>>> Stashed changes
 };
 
 var toXYCoords = function(pos, camera) {
@@ -64,7 +49,4 @@ var updateMarkers = function(markers, camera){
             item.text.style.display = 'inline-block';
         }
     }
-}
-
-
-
+};
