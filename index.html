@@ -14,19 +14,33 @@
     </style>
 </head>
 <body>
+<div id ="container"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
     <script src="three/three.min.js"></script>
     <script src="js/renderers/CanvasRenderer.js"></script>
     <script src="js/stats.min.js"></script>
-
+    <script src="js/controls/OrbitControls.js"></script>
+    <script src="js/marker.js"></script>
     <script>
         var container, stats;
-        var camera, scene, renderer;
+        var camera, scene, renderer, raycaster;
+        var cameraControls;
         var starSource = "data/stars.json";
         var constellationSource = "data/constellations.json";
         var scale = 30;
+        var mouse = new THREE.Vector2();
+        var INTERSECTED;
 
         var windowHalfX = window.innerWidth / 2;
         var windowHalfY = window.innerHeight / 2;
+        var constellationData = new Object();
+
+        var lineCount = 0;
+        var STAR_SIZE = 20;
+        var LINE_SIZE = 1;
+
+        var vertexShader = $('#vertexshader');
+        var fragmentShader = $('#fragmentshader');
 
         init(scale);
         render();
@@ -36,11 +50,11 @@
             container = document.createElement( 'div' );
             document.body.appendChild( container );
             camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 100000000 );
-            camera.position.set(-0.2, 0, 0);
+            camera.position.set(-50, 50, 0);
 
             scene = new THREE.Scene();
 
-            var particles;
+            var particles = [];
             var geometry = new THREE.Geometry();
 
             var httpRequest = new XMLHttpRequest();
@@ -71,26 +85,38 @@
 
                     geometry.colors = colors;
 
-                    var starMaterial = new THREE.ParticleSystemMaterial( {
+                    var starMaterial = new THREE.ParticleBasicMaterial({
+                        color: 0xffffff,
+                        size: 20,
+                        map: THREE.ImageUtils.loadTexture(
+                                "images/particle.png"
+                        ),
+                        blending: THREE.AdditiveBlending,
+                        transparent: true
+                    });
+                    /*
+                    var starMaterial = new THREE.ShaderMaterial( {
                         uniforms: {
-                            cutoff: { type: 'f', value: 1}
-                        },
-                        attributes: {
+                            cutoff: { type: 'f', value: 1},
                             color: { type: 'v3', value: colorsh },
                             luminosity: { type: 'f', value: lumsh }
+
                         },
-                        //vertexShader:   document.getElementById('vertexshader').textContent,
-                        //fragmentShader: document.getElementById('fragmentshader').textContent,
+
+                        vertexShader:   vertexShader.text(),
+                        fragmentShader: fragmentShader.text(),
                         side: THREE.DoubleSide,
                         blending: THREE.AdditiveBlending,
                         transparent: true,
-                        depthTest: true
+                        depthTest: true,
                     });
+                    */
 
                     particles = new THREE.ParticleSystem(geometry, starMaterial);
                     scene.add(particles);
                 }
             }
+
 
             /*
             * DRAW
@@ -99,42 +125,65 @@
             */
 
             var mat = new THREE.LineBasicMaterial({
-                color: '#40e0d0'
+                color: '#40e0d0',
+                size: LINE_SIZE
             });
+
+            /*
+            var mat = new THREE.LineBasicMaterial({
+                transparent: true,
+                opacity: 0
+            });
+
+            var transparentMaterial = new THREE.MeshBasicMaterial({
+                transparent: true,
+                opacity:0.0
+            });
+            */
 
             var httpRequest2 = new XMLHttpRequest();
             httpRequest2.onreadystatechange = function() {
                 if (httpRequest2.readyState === 4) {
-                    var data = JSON.parse(httpRequest2.responseText);
-                    console.log(data);
-                    data.forEach(function (c) {
-                        //
-                        var constellations = c.stars;
-                        var ppX = constellations[0][0].x * scaleFactor,
-                                ppY = constellations[0][0].y * scaleFactor,
-                                ppZ = constellations[0][0].z * scaleFactor;
+                    constellationData = JSON.parse(httpRequest2.responseText);
+                    for (var k=0; k<constellationData.length; k++) {
+                        var con = constellationData[k];
+
+                        var stars = con.stars;
+
+                        var ppX = stars[0][0].x * scaleFactor,
+                                ppY = stars[0][0].y * scaleFactor,
+                                ppZ = stars[0][0].z * scaleFactor;
 
                         var pos = new THREE.Vector3( ppX, ppY, ppZ);
 
-                        var name = c.abbr;
-                        if (c.hasOwnProperty('name')) {
-                            name = c.name;
+                        var name = con.abbr;
+                        if (con.hasOwnProperty('name')) {
+                            name = con.name;
                         }
 
-                        constellations.forEach(function (stars) {
+                        //TODO: add marker
+                        // set marker text color: white, do this in css
+                        // Markers.addMarker(pos, name);
+
+                        for (var i=0; i<stars.length; i++) {
                             var geometry = new THREE.Geometry();
-                            stars.forEach(function (star) {
-                                geometry.vertices.push(
-                                        new THREE.Vector3(
-                                                star.x * scaleFactor,
-                                                star.y * scaleFactor,
-                                                star.z * scaleFactor));
-                            });
-                            var connection = new THREE.Line(geometry, mat);
-                            scene.add(connection);
-                        });
-                    });
-                    alert("constellations drawn");
+                            var star = stars[i];
+                            for (var j=0; j<star.length; j++) {
+                                var s = star[j];
+                                var v = new THREE.Vector3(
+                                        s.x * scaleFactor,
+                                        s.y * scaleFactor,
+                                        s.z * scaleFactor);
+                                geometry.vertices.push(v);
+                            }
+
+                            var connector = new THREE.Line(geometry, mat);
+                            connector.name = "Connector"+lineCount;
+                            scene.add(connector);
+                            lineCount++;
+                        }
+                    }
+                    //alert("constellations drawn");
                 }
             }
 
@@ -144,6 +193,7 @@
             httpRequest2.open("GET", constellationSource);
             httpRequest2.send();
 
+            raycaster = new THREE.Raycaster();
             renderer = new THREE.WebGLRenderer();
             renderer.setClearColor( 0x000 ); // black background
             renderer.setSize( window.innerWidth, window.innerHeight );
@@ -167,12 +217,19 @@
             universe.position.set(0, 0, 0);
             scene.add(universe);
 
+
             stats = new Stats();
             stats.domElement.style.position = 'absolute';
             stats.domElement.style.top = '0px';
             container.appendChild( stats.domElement );
 
+            // EVENTS
             window.addEventListener( 'resize', onWindowResize, false );
+            document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+            // CONTROLS
+            cameraControls = new THREE.OrbitControls( camera );
+            cameraControls.target.set( 0, 0, 0 );
         }
 
         function onWindowResize() {
@@ -187,10 +244,100 @@
 
         }
 
+        function onDocumentMouseMove( event ) {
+
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+        }
+
         function render() {
             requestAnimationFrame(render);
             renderer.render(scene, camera);
+
+            // find intersections
+
+
+            /*
+            var objs = [];
+            var r_geometry = [];
+            var r_attributes = [];
+            for (var i=0; i<lineCount; i++) {
+                objs.push(scene.getObjectByName("Connector" + i));
+                r_geometry = objs[i].geometry;
+                console.log("check: " + r_geometry);
+                r_attributes = r_geometry.attributes;
+            }
+
+            raycaster.setFromCamera( mouse, camera );
+
+            var intersects = raycaster.intersectObjects( objs );
+
+            if ( intersects.length > 0 ) {
+
+                if ( INTERSECTED != intersects[ 0 ].index ) {
+
+                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
+
+                    INTERSECTED = intersects[ 0 ].index;
+
+                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE * 2;
+                    r_attributes.size.needsUpdate = true;
+                }
+
+            }
+            else if ( INTERSECTED !== null ) {
+                r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
+                r_attributes.size.needsUpdate = true;
+                INTERSECTED = null;
+
+            }
+            */
+
+            renderer.render( scene, camera );
+
             stats.update();
+        }
+    </script>
+
+    <script type="x-shader/x-vertex" id="vertexshader">
+        uniform vec3 color;
+        uniform float luminosity
+        varying vec3 vColor;
+        varying float vDist;
+        varying float vLum;
+
+        void main() {
+            vColor = color;
+            vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000.0;
+            vLum = luminosity / 70.0;
+            gl_PointSize = 1.0 + (10.0 * vLum / vDist); //size of the star
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentshader">
+        uniform float cutoff;
+        varying vec3 vColor;
+        varying float vDist;
+        varying float vLum;
+
+        void main() {
+            float radius = distance( vec2(0.5,0.5), gl_PointCoord );
+            if ( radius > 0.5 ) {
+                discard;
+            }
+            float intensity = 1.0 + vLum - vDist;
+            if( radius < cutoff){
+                gl_FragColor = vec4( vec3(1.0,1.0,1.0) * intensity, 1.0);
+            } else {
+                float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
+                gl_FragColor = vec4( vColor*intensity, alpha);
+            }
         }
     </script>
 
