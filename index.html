@@ -18,7 +18,7 @@
         var container, stats;
         var camera, scene, renderer, raycaster;
         var cameraControls;
-        var starSource = "data/stars.json";
+        var starSource = "data/stars2.json";
         var constellationSource = "data/constellations.json";
         var scale = 40;
         var mouse = new THREE.Vector2();
@@ -84,7 +84,7 @@
                     //texture.wrapT = THREE.ClampToEdgeWrapping;
                     texture.mapping = THREE.SphericalReflectionMapping;
                     texture.magFilter = THREE.LinearFilter;
-                    texture.minFilter = THREE.LinearFilter;
+                    texture.minFilter = THREE.NearestFilter;
                     //texture.format = THREE.LuminanceFormat;
                     var starMaterial = new THREE.PointsMaterial({
                         color: 0xffffff,
@@ -149,8 +149,8 @@
                         var stars = con.stars;
 
                         var ppX = stars[0][0].x * scaleFactor,
-                                ppY = stars[0][0].y * scaleFactor,
-                                ppZ = stars[0][0].z * scaleFactor;
+                            ppY = stars[0][0].y * scaleFactor,
+                            ppZ = stars[0][0].z * scaleFactor;
 
                         var pos = new THREE.Vector3( ppX, ppY, ppZ);
 
