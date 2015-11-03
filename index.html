@@ -34,7 +34,7 @@
 
         var vertexShader = $('#vertexshader');
         var fragmentShader = $('#fragmentshader');
-
+        var objectGroup = new THREE.Object3D;
         init(scale);
         render();
 
@@ -49,7 +49,7 @@
 
             scene = new THREE.Scene();
 
-            var particles = [];
+            
             var geometry = new THREE.Geometry();
 
             var httpRequest = new XMLHttpRequest();
@@ -61,7 +61,7 @@
                     var colors = [];
                     var colorsh = [];
                     var lumsh = [];
-
+                    var particles=[];
                     stars.forEach(function(star, i) {
                         var pX = star.pos[0] * scaleFactor,
                                 pY = star.pos[1] * scaleFactor,
@@ -79,7 +79,7 @@
                     });
 
                     geometry.colors = colors;
-                    var texture = THREE.ImageUtils.loadTexture( "images/particle4.png" );
+                    var texture = THREE.ImageUtils.loadTexture( "images/particle3.png" );
                     //texture.wrapS = THREE.RepeatWrapping;
                     //texture.wrapT = THREE.ClampToEdgeWrapping;
                     texture.mapping = THREE.SphericalReflectionMapping;
@@ -112,7 +112,7 @@
                     */
 
                     particles = new THREE.Points(geometry, starMaterial);
-                    scene.add(particles);
+                    objectGroup.add(particles);
                 }
             }
 
@@ -177,7 +177,7 @@
 
                             var connector = new THREE.Line(geometry, mat);
                             connector.name = "Connector"+lineCount;
-                            scene.add(connector);
+                            objectGroup.add(connector);
                             lineCount++;
                         }
                     }
@@ -185,11 +185,14 @@
                 }
             }
 
+            httpRequest.open("GET", starSource);
+            httpRequest.send();
+
             httpRequest2.open("GET", constellationSource);
             httpRequest2.send();
 
-            httpRequest.open("GET", starSource);
-            httpRequest.send();
+            
+            scene.add(objectGroup);
 
             raycaster = new THREE.Raycaster();
             renderer = new THREE.WebGLRenderer();
@@ -206,14 +209,17 @@
 
             // Universe Sphere
             var sphereGeom =  new THREE.SphereGeometry(9000000, 32, 16);
+            var texture = THREE.ImageUtils.loadTexture( "images/milkyway_pan.jpg" );
+                    texture.magFilter = THREE.LinearFilter;
+                    texture.minFilter = THREE.NearestFilter;
             var material = new THREE.MeshBasicMaterial({
-                map: THREE.ImageUtils.loadTexture( 'images/milkyway_pan.jpg' ),
+                map: texture,
                 transparent: false,
                 side: THREE.BackSide
             });
             var universe = new THREE.Mesh(sphereGeom.clone(), material);
             universe.position.set(0, 0, 0);
-            scene.add(universe);
+            //scene.add(universe);
 
 
             stats = new Stats();
