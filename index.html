@@ -7,7 +7,14 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id='menu'><button onclick='removebg()'>Add/Remove BG</button></div>
+<div id='menu'>
+    <button id='rm1' onclick='removebg(1)'>Add BG</button>
+    <button id='rm2' onclick='removebg(2)'>Remove BG</button>
+    <button id='rm3' onclick='removebg(3)'>Add Const</button>
+    <button id='rm4' onclick='removebg(4)'>Remove Const</button>
+    <button id='rm5' onclick='removebg(5)'>Add Stars</button>
+    <button id='rm6' onclick='removebg(6)'>Remove Stars</button>
+</div>
 <div id ="container"></div>
 <script src="js/jquery.js"></script>
     <script src="three/three.min.js"></script>
@@ -36,7 +43,8 @@
         var vertexShader = $('#vertexshader');
         var fragmentShader = $('#fragmentshader');
         var objectGroup = new THREE.Object3D;
-        var universe;
+        var universe, connector;
+        var particles=[];
         init(scale);
         render();
 
@@ -63,7 +71,7 @@
                     var colors = [];
                     var colorsh = [];
                     var lumsh = [];
-                    var particles=[];
+                    
                     stars.forEach(function(star, i) {
                         var pX = star.pos[0] * scaleFactor,
                                 pY = star.pos[1] * scaleFactor,
@@ -177,7 +185,7 @@
                                 geometry.vertices.push(v);
                             }
 
-                            var connector = new THREE.Line(geometry, mat);
+                            connector = new THREE.Line(geometry, mat);
                             connector.name = "Connector"+lineCount;
                             objectGroup.add(connector);
                             lineCount++;
@@ -238,8 +246,17 @@
 
         }
 
-        function removebg(){
-            objectGroup.remove(universe);
+        function removebg(cm){
+            console.log(cm)
+            switch(cm) {
+                case 1:{objectGroup.add(universe);$("#rm1").disabled=true;$("#rm2").disabled=false;}break;
+                case 2:{objectGroup.remove(universe);$("#rm2").disabled=true;$("#rm1").disabled=false;}break;
+                case 3:{objectGroup.add(connector);$("#rm3").disabled=true;$("#rm4").disabled=false;Markers.showMarkers();}break;
+                case 4:{objectGroup.remove(connector);$("#rm4").disabled=true;$("#rm3").disabled=false;Markers.hideMarkers();}break;
+                case 5:{objectGroup.add(particles);$("#rm5").disabled=true;$("#rm6").disabled=false;}break;
+                case 6:{objectGroup.remove(particles);$("#rm6").disabled=true;$("#rm5").disabled=false;}break;
+            }
+            
         }
         function onWindowResize() {
 
