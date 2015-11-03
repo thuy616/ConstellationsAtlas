@@ -80,6 +80,8 @@
 
                     geometry.colors = colors;
 
+                    /*
+
                     var starMaterial = new THREE.PointsMaterial({
                         color: 0xffffff,
                         size: STAR_SIZE,
@@ -89,23 +91,25 @@
                         blending: THREE.AdditiveBlending,
                         transparent: true
                     });
-                    /*
+                    */
+                    
                     var starMaterial = new THREE.ShaderMaterial( {
                         uniforms: {
-                            cutoff: { type: 'f', value: 1},
+                            cutoff: { type: 'f', value: 0.25},
                             color: { type: 'v3', value: colorsh },
+                            texture:   { type: "t", value: THREE.ImageUtils.loadTexture( "images/spark2.png" ), blending: THREE.AdditiveBlending},
                             luminosity: { type: 'f', value: lumsh }
 
                         },
 
-                        vertexShader:   vertexShader.text(),
-                        fragmentShader: fragmentShader.text(),
+                        vertexShader:   document.getElementById('vertexshader').textContent,
+                        fragmentShader: document.getElementById('fragmentshader').textContent,
                         side: THREE.DoubleSide,
                         blending: THREE.AdditiveBlending,
                         transparent: true,
-                        depthTest: true,
+                        depthTest: true
                     });
-                    */
+                    
 
                     particles = new THREE.Points(geometry, starMaterial);
                     scene.add(particles);
@@ -300,42 +304,47 @@
     </script>
 
     <script type="x-shader/x-vertex" id="vertexshader">
-        uniform vec3 color;
-        uniform float luminosity
-        varying vec3 vColor;
-        varying float vDist;
-        varying float vLum;
-
-        void main() {
-            vColor = color;
-            vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000.0;
-            vLum = luminosity / 70.0;
-            gl_PointSize = 1.0 + (10.0 * vLum / vDist); //size of the star
-
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-
-        }
+        
+            attribute vec3 color;
+            attribute float luminosity;
+            
+            varying vec3 vColor;
+            varying float vDist;
+            varying float vLum;
+            
+            void main() {
+                vColor = color;
+                
+                vec4 currpos = vec4( position, 1.0 );
+                vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000000.0;
+                vLum = luminosity / 70.0;
+                gl_PointSize = 5.5 + luminosity/vDist;
+                
+                gl_Position = projectionMatrix * modelViewMatrix * currpos;
+            }
     </script>
-
+    
     <script type="x-shader/x-fragment" id="fragmentshader">
-        uniform float cutoff;
-        varying vec3 vColor;
-        varying float vDist;
-        varying float vLum;
-
-        void main() {
-            float radius = distance( vec2(0.5,0.5), gl_PointCoord );
-            if ( radius > 0.5 ) {
-                discard;
+            uniform float cutoff;
+            uniform sampler2D texture;
+            varying vec3 vColor;
+            varying float vDist;
+            varying float vLum;
+            
+            void main() {
+                float radius = distance( vec2(0.5,0.5), gl_PointCoord );
+                if ( radius > 1.0 ) {
+                    discard;
+                }
+                float intensity = 1.0 + vLum - vDist;
+                if( radius < cutoff){
+                    gl_FragColor = vec4( vColor * intensity, 1.0);
+                } else {
+                    float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
+                    gl_FragColor = vec4( vColor*intensity, alpha);
+                }
+                gl_FragColor = gl_FragColor * texture2D(texture, gl_PointCoord) * 2.0;
             }
-            float intensity = 1.0 + vLum - vDist;
-            if( radius < cutoff){
-                gl_FragColor = vec4( vec3(1.0,1.0,1.0) * intensity, 1.0);
-            } else {
-                float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
-                gl_FragColor = vec4( vColor*intensity, alpha);
-            }
-        }
     </script>
 
 </body>
