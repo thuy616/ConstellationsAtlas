@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id='menu'><button onclick='removebg()'>Add/Remove BG</button></div>
 <div id ="container"></div>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="js/jquery.js"></script>
     <script src="three/three.min.js"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
@@ -35,6 +36,7 @@
         var vertexShader = $('#vertexshader');
         var fragmentShader = $('#fragmentshader');
         var objectGroup = new THREE.Object3D;
+        var universe;
         init(scale);
         render();
 
@@ -214,7 +216,7 @@
                 transparent: false,
                 side: THREE.BackSide
             });
-            var universe = new THREE.Mesh(sphereGeom.clone(), material);
+            universe = new THREE.Mesh(sphereGeom.clone(), material);
             universe.position.set(0, 0, 0);
             objectGroup.add(universe);
 
@@ -233,8 +235,12 @@
             cameraControls.target.set( 0, 0, 0 );
             scene.add(objectGroup);
 
+
         }
 
+        function removebg(){
+            objectGroup.remove(universe);
+        }
         function onWindowResize() {
 
             windowHalfX = window.innerWidth / 2;
@@ -304,6 +310,7 @@
 
             updateMarkers(Markers.markers, camera);
             stats.update();
+
         }
     </script>
 

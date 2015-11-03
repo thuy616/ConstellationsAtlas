@@ -2,7 +2,7 @@
  * Created by thuynguyen on 09/10/15.
  */
 var Markers = {
-    projector: new THREE.Projector(),
+    //projector: new THREE.Projector(),
 
     markers: [],
     addMarker: function(vector, name, camera) {
@@ -23,6 +23,12 @@ var Markers = {
         document.getElementById("container").appendChild(l.text);
         //to2DPlane(l, vector, camera);
         return l.text;
+    },
+    hideMarkers: function(){
+        $(".marker").hide();
+    },
+    showMarkers: function(){
+        $(".marker").show();
     }
 
 };
