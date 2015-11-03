@@ -191,9 +191,6 @@
             httpRequest2.open("GET", constellationSource);
             httpRequest2.send();
 
-            
-            scene.add(objectGroup);
-
             raycaster = new THREE.Raycaster();
             renderer = new THREE.WebGLRenderer();
             renderer.setClearColor( 0x000 ); // black background
@@ -219,7 +216,7 @@
             });
             var universe = new THREE.Mesh(sphereGeom.clone(), material);
             universe.position.set(0, 0, 0);
-            //scene.add(universe);
+            objectGroup.add(universe);
 
 
             stats = new Stats();
@@ -234,6 +231,7 @@
             // CONTROLS
             cameraControls = new THREE.OrbitControls( camera );
             cameraControls.target.set( 0, 0, 0 );
+            scene.add(objectGroup);
 
         }
 
