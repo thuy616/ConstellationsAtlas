@@ -7,39 +7,228 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id ="container"></div>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+    <div id ="container"></div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
     <script src="three/three.min.js"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
     <script src="js/controls/OrbitControls.js"></script>
     <script src="js/marker.js"></script>
+    <script src="sun.js"></script>
+    <script type="x-shader/x-fragment" id="fragmentshader">
+            uniform float cutoff;
+            varying vec3 vColor;
+            varying float vDist;
+            varying float vLum;
+            
+            void main() {
+                float radius = distance( vec2(0.5,0.5), gl_PointCoord );
+                if ( radius > 0.5 ) {
+                    discard;
+                }
+                float intensity = 1.0 + vLum - vDist;
+                if( radius < cutoff){
+                    gl_FragColor = vec4( vec3(1.0,1.0,1.0) * intensity, 1.0);
+                } else {
+                    float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
+                    gl_FragColor = vec4( vColor*intensity, alpha);
+                }
+            }
+    </script>    
+    <script type="x-shader/x-vertex" id="starflare_v">
+        attribute float size;
+        attribute vec3 customColor;
+
+        varying vec3 vColor;
+        varying float dist;
+        varying float pSize;
+
+        uniform float zoomSize;
+        uniform float scale;
+
+        void main() {
+
+            vColor = customColor;
+
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+            dist = length( mvPosition.xyz );
+
+            float finalSize = scale * size / length( mvPosition.xyz );
+
+            //gl_PointSize = clamp( scaledSize , 0., 4000.);
+            //gl_PointSize = size * ( scale / length( mvPosition.xyz ));
+
+            gl_PointSize = finalSize;
+
+            gl_Position = projectionMatrix * mvPosition;
+            pSize = finalSize;
+
+        }
+        </script>
+
+        <script type="x-shader/x-fragment" id="starflare_f">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        uniform sampler2D texturePrimary;
+        varying vec4 screenPosition;
+
+        uniform float spectralLookup;
+        uniform sampler2D textureSpectral;
+
+        void main() {
+            vec2 uv = vUv;
+            // uv.y *= 2.;
+            uv.y -= 0.5;
+            uv.y = abs(uv.y);
+            // uv.x = 0.2 + uv.x * 0.4;
+            // uv.x = fract(uv.x * 2.);
+            vec3 colorIndex = texture2D( texturePrimary, uv ).xyz;
+
+            float intensity = 1.45 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ) * 2.0;
+            vec3 outerGlow = vec3( 1., 1., 1. ) * pow( intensity, 2.0 );
+
+            float distanceToCenter = clamp(length( screenPosition.xyz ) - 0.45 ,0., 1.0);
+
+            float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+            vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+            vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+            spectralColor.x = pow( spectralColor.x, 3. );
+            spectralColor.y = pow( spectralColor.y, 3. );
+            spectralColor.z = pow( spectralColor.z, 3. );
+
+            spectralColor.xyz *= 10.0;
+
+            // gl_FragColor = vec4( distanceToCenter, 0., 0., 1.0 );
+            gl_FragColor = vec4( (colorIndex - pow(intensity,2.) * 0.1) * pow(distanceToCenter,3.) * spectralColor.xyz, 1.0 );
+
+        }
+        </script>
+
+        <script type="x-shader/x-vertex" id="starsurface_v">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        void main() {
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            vNormal = normalize( normalMatrix * normal );
+            vUv = uv;
+        }
+        </script>
+
+        <script type="x-shader/x-fragment" id="starsurface_f">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        uniform sampler2D texturePrimary;
+        uniform sampler2D textureColor;
+        uniform sampler2D textureSpectral;
+        uniform float time;
+        uniform float spectralLookup;
+
+        void main() {
+            float uvMag = 2.0;
+            float paletteSpeed = 0.2;
+            float minLookup = 0.2;
+            float maxLookup = 0.98;
+
+            //  let's double up on the texture to make the sun look more detailed
+            vec2 uv = vUv * uvMag;
+
+            //  do a lookup for the texture now, but hold on to its gray value
+            vec3 colorIndex = texture2D( texturePrimary, uv ).xyz;
+            float lookupColor = colorIndex.x;
+
+            //  now cycle the value, and clamp it, we're going to use this for a second lookup
+            lookupColor = fract( lookupColor - time * paletteSpeed );
+            lookupColor = clamp(lookupColor, minLookup, maxLookup );
+
+            //  use the value found and find what color to use in a palette texture
+            vec2 lookupUV = vec2( lookupColor, 0. );
+            vec3 foundColor = texture2D( textureColor, lookupUV ).xyz;
+
+            //  now do some color grading
+            foundColor.xyz *= 0.6;
+            foundColor.x = pow(foundColor.x, 2.);
+            foundColor.y = pow(foundColor.y, 2.);
+            foundColor.z = pow(foundColor.z, 2.);
+
+            foundColor.xyz += vec3( 0.6, 0.6, 0.6 ) * 1.4;
+            //foundColor.xyz += vec3(0.6,0.35,0.21) * 2.2;
+
+            float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+            vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+            vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+            spectralColor.x = pow( spectralColor.x, 2. );
+            spectralColor.y = pow( spectralColor.y, 2. );
+            spectralColor.z = pow( spectralColor.z, 2. );
+
+            foundColor.xyz *= spectralColor.xyz;    
+            
+
+            //  apply a secondary, subtractive pass to give it more detail
+            //  first we get the uv and apply some warping
+            vec2 uv2 = vec2( vUv.x + cos(time) * 0.001, vUv.y + sin(time) * 0.001 );
+            vec3 secondaryColor = texture2D( texturePrimary, uv2 ).xyz;
+
+            //  finally give it an outer rim to blow out the edges
+            float intensity = 1.15 - dot( vNormal, vec3( 0.0, 0.0, 0.3 ) );
+            vec3 outerGlow = vec3( 1.0, 0.8, 0.6 ) * pow( intensity, 6.0 );
+
+            vec3 desiredColor = foundColor + outerGlow - secondaryColor;
+            float darkness = 1.0 - clamp( length( desiredColor ), 0., 1. );
+            vec3 colorCorrection = vec3(0.7, 0.4, 0.01) * pow(darkness,2.0) * secondaryColor;
+            desiredColor += colorCorrection;
+
+            //  the final composite color
+            gl_FragColor = vec4( desiredColor, 1.0 );
+        }
+        </script>
+
+
     <script>
-        var container, stats;
-        var camera, scene, renderer, raycaster;
-        var cameraControls;
-        var starSource = "data/stars.json";
-        var constellationSource = "data/constellations.json";
-        var scale = 40;
-        var mouse = new THREE.Vector2();
-        var INTERSECTED;
+    var container, stats;
+    var camera, scene, renderer, raycaster;
+    var cameraControls;
+    var starSource = "data/stars.json";
+    var constellationSource = "data/constellations.json";
+    var scale = 40;
+    var mouse = new THREE.Vector2();
+    var INTERSECTED;
 
-        var windowHalfX = window.innerWidth / 2;
-        var windowHalfY = window.innerHeight / 2;
-        var constellationData = new Object();
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+    var constellationData = new Object();
 
-        var lineCount = 0;
-        var STAR_SIZE = 15;
-        var LINE_SIZE = 1;
+    var lineCount = 0;
+    var STAR_SIZE = 15;
+    var LINE_SIZE = 1;
 
-        var vertexShader = $('#vertexshader');
-        var fragmentShader = $('#fragmentshader');
+    var shaderList = new Object();
 
-        init(scale);
-        render();
+    loadShaders();
+
+    console.log("check shaderList.starflare.vertex:  " + shaderList.starflare.vertex);
+
+    init(scale);
+    render();
+    
+    function loadShaders() {
+        var starflare = new Object();
+        starflare.vertex = document.getElementById("starflare_v").textContent;
+        starflare.fragment = document.getElementById('starflare_f').textContent;
+        shaderList.starflare = starflare;
+
+        var starsurface = new Object();
+        starsurface.vertex = document.getElementById('starsurface_v').textContent;
+        starsurface.fragment = document.getElementById('starsurface_f').textContent;
+        shaderList.starsurface = starsurface;
+
+    }
 
         // read stars coordinates from stars.json
         function init(scaleFactor) {
+            console.log("add canvas");
             container = document.createElement( 'div' );
             document.body.appendChild( container );
             camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 100000000000 );
@@ -61,12 +250,14 @@
                     var colors = [];
                     var colorsh = [];
                     var lumsh = [];
+                    
 
                     stars.forEach(function(star, i) {
                         var pX = star.pos[0] * scaleFactor,
-                                pY = star.pos[1] * scaleFactor,
-                                pZ = star.pos[2] * scaleFactor;
+                        pY = star.pos[1] * scaleFactor,
+                        pZ = star.pos[2] * scaleFactor;
                         var vertex = new THREE.Vector3(pX, pY, pZ);
+                        
                         geometry.vertices.push(vertex);
 
                         colors[i] = new THREE.Color();
@@ -78,9 +269,8 @@
                         //TODO: add label
                     });
 
-                    geometry.colors = colors;
 
-                    /*
+                    geometry.colors = colors;
 
                     var starMaterial = new THREE.PointsMaterial({
                         color: 0xffffff,
@@ -91,30 +281,21 @@
                         blending: THREE.AdditiveBlending,
                         transparent: true
                     });
-                    */
-                    
-                    var starMaterial = new THREE.ShaderMaterial( {
-                        uniforms: {
-                            cutoff: { type: 'f', value: 0.25},
-                            color: { type: 'v3', value: colorsh },
-                            texture:   { type: "t", value: THREE.ImageUtils.loadTexture( "images/spark2.png" ), blending: THREE.AdditiveBlending},
-                            luminosity: { type: 'f', value: lumsh }
 
-                        },
-
-                        vertexShader:   document.getElementById('vertexshader').textContent,
-                        fragmentShader: document.getElementById('fragmentshader').textContent,
-                        side: THREE.DoubleSide,
-                        blending: THREE.AdditiveBlending,
-                        transparent: true,
-                        depthTest: true
-                    });
-                    
 
                     particles = new THREE.Points(geometry, starMaterial);
+                    
                     scene.add(particles);
+                    
                 }
             }
+            console.log("Drawing sun!");
+            var sun = makeSun(10, 'G', shaderList);
+
+            sun.position = new THREE.Vector3(0,0,0);
+            scene.add(sun)
+
+            console.log("Sun drawn!");
 
 
             /*
@@ -137,27 +318,27 @@
                 transparent: true,
                 opacity:0.0
             });
-            */
+*/
 
-            var httpRequest2 = new XMLHttpRequest();
-            httpRequest2.onreadystatechange = function() {
-                if (httpRequest2.readyState === 4) {
-                    constellationData = JSON.parse(httpRequest2.responseText);
-                    for (var k=0; k<constellationData.length; k++) {
-                        var con = constellationData[k];
+var httpRequest2 = new XMLHttpRequest();
+httpRequest2.onreadystatechange = function() {
+    if (httpRequest2.readyState === 4) {
+        constellationData = JSON.parse(httpRequest2.responseText);
+        for (var k=0; k<constellationData.length; k++) {
+            var con = constellationData[k];
 
-                        var stars = con.stars;
+            var stars = con.stars;
 
-                        var ppX = stars[0][0].x * scaleFactor,
-                                ppY = stars[0][0].y * scaleFactor,
-                                ppZ = stars[0][0].z * scaleFactor;
+            var ppX = stars[0][0].x * scaleFactor,
+            ppY = stars[0][0].y * scaleFactor,
+            ppZ = stars[0][0].z * scaleFactor;
 
-                        var pos = new THREE.Vector3( ppX, ppY, ppZ);
+            var pos = new THREE.Vector3( ppX, ppY, ppZ);
 
-                        var name = con.abbr;
-                        if (con.hasOwnProperty('name')) {
-                            name = con.name;
-                        }
+            var name = con.abbr;
+            if (con.hasOwnProperty('name')) {
+                name = con.name;
+            }
 
                         //TODO: add marker
                         // set marker text color: white, do this in css
@@ -169,9 +350,9 @@
                             for (var j=0; j<star.length; j++) {
                                 var s = star[j];
                                 var v = new THREE.Vector3(
-                                        s.x * scaleFactor,
-                                        s.y * scaleFactor,
-                                        s.z * scaleFactor);
+                                    s.x * scaleFactor,
+                                    s.y * scaleFactor,
+                                    s.z * scaleFactor);
                                 geometry.vertices.push(v);
                             }
 
@@ -231,6 +412,10 @@
 
         }
 
+        function setupGui() {
+            effectControl = {};
+        }
+
         function onWindowResize() {
 
             windowHalfX = window.innerWidth / 2;
@@ -252,100 +437,24 @@
 
         }
 
+
         function render() {
             requestAnimationFrame(render);
             renderer.render(scene, camera);
-
-            // find intersections
-
-
-            /*
-            var objs = [];
-            var r_geometry = [];
-            var r_attributes = [];
-            for (var i=0; i<lineCount; i++) {
-                objs.push(scene.getObjectByName("Connector" + i));
-                r_geometry = objs[i].geometry;
-                console.log("check: " + r_geometry);
-                r_attributes = r_geometry.attributes;
-            }
-
-            raycaster.setFromCamera( mouse, camera );
-
-            var intersects = raycaster.intersectObjects( objs );
-
-            if ( intersects.length > 0 ) {
-
-                if ( INTERSECTED != intersects[ 0 ].index ) {
-
-                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
-
-                    INTERSECTED = intersects[ 0 ].index;
-
-                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE * 2;
-                    r_attributes.size.needsUpdate = true;
-                }
-
-            }
-            else if ( INTERSECTED !== null ) {
-                r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
-                r_attributes.size.needsUpdate = true;
-                INTERSECTED = null;
-
-            }
-            */
-
 
             renderer.render( scene, camera );
 
             updateMarkers(Markers.markers, camera);
             stats.update();
         }
-    </script>
 
-    <script type="x-shader/x-vertex" id="vertexshader">
+
+
+        </script>
+
         
-            attribute vec3 color;
-            attribute float luminosity;
-            
-            varying vec3 vColor;
-            varying float vDist;
-            varying float vLum;
-            
-            void main() {
-                vColor = color;
-                
-                vec4 currpos = vec4( position, 1.0 );
-                vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000000.0;
-                vLum = luminosity / 70.0;
-                gl_PointSize = 5.5 + luminosity/vDist;
-                
-                gl_Position = projectionMatrix * modelViewMatrix * currpos;
-            }
-    </script>
-    
-    <script type="x-shader/x-fragment" id="fragmentshader">
-            uniform float cutoff;
-            uniform sampler2D texture;
-            varying vec3 vColor;
-            varying float vDist;
-            varying float vLum;
-            
-            void main() {
-                float radius = distance( vec2(0.5,0.5), gl_PointCoord );
-                if ( radius > 1.0 ) {
-                    discard;
-                }
-                float intensity = 1.0 + vLum - vDist;
-                if( radius < cutoff){
-                    gl_FragColor = vec4( vColor * intensity, 1.0);
-                } else {
-                    float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
-                    gl_FragColor = vec4( vColor*intensity, alpha);
-                }
-                gl_FragColor = gl_FragColor * texture2D(texture, gl_PointCoord) * 2.0;
-            }
-    </script>
 
-</body>
-</html>
+        
+
+    </body>
+    </html>
