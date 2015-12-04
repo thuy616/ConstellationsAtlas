@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>3D Starry Night - Explore the Universe</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id ="container"></div>
+    <img id="gradientImage" src="images/star_color_modified.png" style="display:none"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+    <script src="data/stars.json"></script>
+    <script src="js/renderers/Projector.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/controls/OrbitControls.js"></script>
+    <script src="js/marker.js"></script>
+    <script src="lensflare.js"></script>
+    <script src="sun.js"></script>
+    <script src="js/MTLLoader.js"></script>
+    <script src="js/OBJMTLLoader.js"></script>
+    <script src="js/OBJLoader.js"></script>
+    <script src="js/ShaderParticles.js"></script>
+
+    
+    <script type="x-shader/x-vertex" id="starflare_v">
+        
+
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    uniform float time;
+    varying vec4 screenPosition;
+
+    //
+    // Description : Array and textureless GLSL 2D simplex noise function.
+    //      Author : Ian McEwan, Ashima Arts.
+    //  Maintainer : ijm
+    //     Lastmod : 20110822 (ijm)
+    //     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+    //               Distributed under the MIT License. See LICENSE file.
+    //               https://github.com/ashima/webgl-noise
+    //
+
+    vec3 mod289(vec3 x) {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec2 mod289(vec2 x) {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec3 permute(vec3 x) {
+      return mod289(((x*34.0)+1.0)*x);
+    }
+
+    float snoise(vec2 v)
+    {
+      const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+                          0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+                         -0.577350269189626,  // -1.0 + 2.0 * C.x
+                          0.024390243902439); // 1.0 / 41.0
+    // First corner
+      vec2 i  = floor(v + dot(v, C.yy) );
+      vec2 x0 = v -   i + dot(i, C.xx);
+
+    // Other corners
+      vec2 i1;
+      //i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+      //i1.y = 1.0 - i1.x;
+      i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+      // x0 = x0 - 0.0 + 0.0 * C.xx ;
+      // x1 = x0 - i1 + 1.0 * C.xx ;
+      // x2 = x0 - 1.0 + 2.0 * C.xx ;
+      vec4 x12 = x0.xyxy + C.xxzz;
+      x12.xy -= i1;
+
+    // Permutations
+      i = mod289(i); // Avoid truncation effects in permutation
+      vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+            + i.x + vec3(0.0, i1.x, 1.0 ));
+
+      vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+      m = m*m ;
+      m = m*m ;
+
+    // Gradients: 41 points uniformly over a line, mapped onto a diamond.
+    // The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+
+      vec3 x = 2.0 * fract(p * C.www) - 1.0;
+      vec3 h = abs(x) - 0.5;
+      vec3 ox = floor(x + 0.5);
+      vec3 a0 = x - ox;
+
+    // Normalise gradients implicitly by scaling m
+    // Approximation of: m *= inversesqrt( a0*a0 + h*h );
+      m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+
+    // Compute final noise value at P
+      vec3 g;
+      g.x  = a0.x  * x0.x  + h.x  * x0.y;
+      g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+      return 130.0 * dot(m, g);
+    }
+
+    void main() {
+        float timeSample = time * 0.4;
+        vec3 heightOff = vec3(  snoise( vec2(position.x * 60000000., timeSample) ),
+                                snoise( vec2(position.y * 60000000., timeSample) ),
+                                snoise( vec2(position.z * 60000000., timeSample) ) );
+        vec3 finalPosition = position + heightOff * 0.0000000015;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( finalPosition, 1.0 );
+        vUv = uv;
+        vNormal = normalize( normalMatrix * normal );
+        screenPosition = gl_Position;
+    }
+            </script>
+
+            <script type="x-shader/x-fragment" id="starflare_f">
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            uniform sampler2D texturePrimary;
+            varying vec4 screenPosition;
+
+            uniform float spectralLookup;
+            uniform sampler2D textureSpectral;
+
+            void main() {
+                vec2 uv = vUv;
+                // uv.y *= 2.;
+                uv.y -= 0.5;
+                uv.y = abs(uv.y);
+                // uv.x = 0.2 + uv.x * 0.4;
+                // uv.x = fract(uv.x * 2.);
+                vec3 colorIndex = texture2D( texturePrimary, uv ).xyz;
+
+                float intensity = 1.45 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ) * 2.0;
+                vec3 outerGlow = vec3( 1., 1., 1. ) * pow( intensity, 2.0 );
+
+                float distanceToCenter = clamp(length( screenPosition.xyz ) - 0.45 ,0., 1.0);
+
+                float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+                vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+                vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+                spectralColor.x = pow( spectralColor.x, 3. );
+                spectralColor.y = pow( spectralColor.y, 3. );
+                spectralColor.z = pow( spectralColor.z, 3. );
+
+                spectralColor.xyz *= 10.0;
+
+                // gl_FragColor = vec4( distanceToCenter, 0., 0., 1.0 );
+                gl_FragColor = vec4( (colorIndex - pow(intensity,2.) * 0.1) * pow(distanceToCenter,3.) * spectralColor.xyz, 1.0 );
+
+            }
+        </script>
+
+        <script type="x-shader/x-vertex" id="starsurface_v">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        void main() {
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            vNormal = normalize( normalMatrix * normal );
+            vUv = uv;
+        }
+        </script>
+
+        <script type="x-shader/x-fragment" id="starsurface_f">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        uniform sampler2D texturePrimary;
+        uniform sampler2D textureColor;
+        uniform sampler2D textureSpectral;
+        uniform float time;
+        uniform float spectralLookup;
+
+        void main() {
+            float uvMag = 2.0;
+            float paletteSpeed = 0.2;
+            float minLookup = 0.2;
+            float maxLookup = 0.98;
+
+            //  let's double up on the texture to make the sun look more detailed
+            vec2 uv = vUv * uvMag;
+
+            //  do a lookup for the texture now, but hold on to its gray value
+            vec3 colorIndex = texture2D( texturePrimary, uv ).xyz;
+            float lookupColor = colorIndex.x;
+
+            //  now cycle the value, and clamp it, we're going to use this for a second lookup
+            lookupColor = fract( lookupColor - time * paletteSpeed );
+            lookupColor = clamp(lookupColor, minLookup, maxLookup );
+
+            //  use the value found and find what color to use in a palette texture
+            vec2 lookupUV = vec2( lookupColor, 0. );
+            vec3 foundColor = texture2D( textureColor, lookupUV ).xyz;
+
+            //  now do some color grading
+            foundColor.xyz *= 0.6;
+            foundColor.x = pow(foundColor.x, 2.);
+            foundColor.y = pow(foundColor.y, 2.);
+            foundColor.z = pow(foundColor.z, 2.);
+
+            foundColor.xyz += vec3( 0.6, 0.6, 0.6 ) * 1.4;
+            //foundColor.xyz += vec3(0.6,0.35,0.21) * 2.2;
+
+            float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+            vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+            vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+            spectralColor.x = pow( spectralColor.x, 2. );
+            spectralColor.y = pow( spectralColor.y, 2. );
+            spectralColor.z = pow( spectralColor.z, 2. );
+
+            foundColor.xyz *= spectralColor.xyz;    
+            
+
+            //  apply a secondary, subtractive pass to give it more detail
+            //  first we get the uv and apply some warping
+            vec2 uv2 = vec2( vUv.x + cos(time) * 0.001, vUv.y + sin(time) * 0.001 );
+            vec3 secondaryColor = texture2D( texturePrimary, uv2 ).xyz;
+
+            //  finally give it an outer rim to blow out the edges
+            float intensity = 1.15 - dot( vNormal, vec3( 0.0, 0.0, 0.3 ) );
+            vec3 outerGlow = vec3( 1.0, 0.8, 0.6 ) * pow( intensity, 6.0 );
+
+            vec3 desiredColor = foundColor + outerGlow - secondaryColor;
+            float darkness = 1.0 - clamp( length( desiredColor ), 0., 1. );
+            vec3 colorCorrection = vec3(0.7, 0.4, 0.01) * pow(darkness,2.0) * secondaryColor;
+            desiredColor += colorCorrection;
+
+            //  the final composite color
+            gl_FragColor = vec4( desiredColor, 1.0 );
+        }
+        </script>
+
+        <script type="x-shader/x-vertex" id="starhalo_v">
+        varying vec2 vUv;
+        void main() {
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            vUv = uv;
+        }
+        </script>
+
+        <script type="x-shader/x-fragment" id="starhalo_f">
+        varying vec2 vUv;
+        uniform sampler2D texturePrimary;
+        uniform sampler2D textureColor;
+        uniform float time;
+
+        uniform float spectralLookup;
+        uniform sampler2D textureSpectral;
+
+        void main() {
+            vec3 colorIndex = texture2D( texturePrimary, vUv ).xyz;
+            float lookupColor = colorIndex.x;
+            lookupColor = fract( lookupColor + time * 0.04 );
+            lookupColor = clamp(lookupColor,0.2,0.98);
+            vec2 lookupUV = vec2( lookupColor, 0. );
+            vec3 foundColor = texture2D( textureColor, lookupUV ).xyz;
+
+            foundColor.xyz += 0.4;
+            foundColor *= 10.0;
+
+            float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+            vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+            vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+            spectralColor.x = pow( spectralColor.x, 3. );
+            spectralColor.y = pow( spectralColor.y, 3. );
+            spectralColor.z = pow( spectralColor.z, 3. );
+
+            gl_FragColor = vec4( foundColor * colorIndex * spectralColor.xyz , 1.0 );
+        }
+        </script>
+
+        <script type="x-shader/x-vertex" id="corona_v">
+        varying vec2 vUv;
+        void main() {
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            vUv = uv;
+        }
+        </script>
+
+        <script type="x-shader/x-fragment" id="corona_f">
+        varying vec2 vUv;
+
+        uniform sampler2D texturePrimary;
+
+        uniform float spectralLookup;
+        uniform sampler2D textureSpectral;
+
+        void main() {
+            vec2 uv = vUv;
+            
+            vec4 foundColor = texture2D( texturePrimary, uv );
+            foundColor.x *= 1.4;
+            foundColor.y *= 1.2;
+            foundColor.z *= 0.7;
+            //foundColor.xyz *= 10.0;
+            foundColor = clamp( foundColor, 0., 1. );   
+
+            float spectralLookupClamped = clamp( spectralLookup, 0., 1. );
+            vec2 spectralLookupUV = vec2( 0., spectralLookupClamped );
+            vec4 spectralColor = texture2D( textureSpectral, spectralLookupUV );    
+
+            spectralColor.x = pow( spectralColor.x, 2. );
+            spectralColor.y = pow( spectralColor.y, 2. );
+            spectralColor.z = pow( spectralColor.z, 2. );
+
+            spectralColor.xyz += 0.2;
+
+            vec3 finalColor = clamp( foundColor.xyz * spectralColor.xyz * 1.4 , 0., 1.);
+
+            gl_FragColor = vec4( finalColor, 1.0 );
+
+        }
+        </script>
+
+
+    <script>
+    var gradientCanvas;
+    var gradientImage;
+
+    var container, stats;
+    var camera, scene, renderer, raycaster;
+    scene = new THREE.Scene();
+    var cameraControls;
+    var starSource = "data/stars.json";
+    var constellationSource = "data/constellations.json";
+    var scale = 20;
+    var mouse = new THREE.Vector2();
+    var INTERSECTED;
+
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+    var constellationData = new Object();
+
+    var lineCount = 0;
+    var STAR_SIZE = 15;
+    var LINE_SIZE = 1;
+
+    var shaderList = new Object();
+
+    var startTime = Date.now();
+    var shaderTiming = 0;
+    this.sun;
+
+    loadShaders();
+    init(scale);
+    render();
+    
+    function loadShaders() {
+        var starflare = new Object();
+        starflare.vertex = document.getElementById("starflare_v").textContent;
+        starflare.fragment = document.getElementById('starflare_f').textContent;
+        shaderList.starflare = starflare;
+
+        var starsurface = new Object();
+        starsurface.vertex = document.getElementById('starsurface_v').textContent;
+        starsurface.fragment = document.getElementById('starsurface_f').textContent;
+        shaderList.starsurface = starsurface;
+
+        var starhalo = new Object();
+        starhalo.vertex = document.getElementById('starhalo_v').textContent;
+        starhalo.fragment = document.getElementById('starhalo_f').textContent;
+        shaderList.starhalo = starhalo;
+
+        var corona = new Object();
+        corona.vertex = document.getElementById('corona_v').textContent;
+        corona.fragment = document.getElementById('corona_f').textContent;
+        shaderList.corona = corona;
+    }
+
+
+        // read stars coordinates from stars.json
+        function init(scaleFactor) {
+
+            container = document.createElement( 'div' );
+            document.body.appendChild( container );
+            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 100000000000 );
+
+            camera.position.set(0.5, 0, -0.5);
+            camera.lookAt(new THREE.Vector3(0, 0, -100));
+
+
+            var star3ds = [];
+            
+            var min = 1;
+            var max = 40;
+
+            var i, r = 4, starsGeometry = [ new THREE.Geometry(), new THREE.Geometry() ];
+            var starContainer = new THREE.Object3D();
+            
+
+            for (var j = 0; j<stars.length ;j++) {
+                var star = stars[j];
+
+                var vertex = new THREE.Vector3();
+                vertex.x = star.pos[0] * scaleFactor;
+                vertex.y = star.pos[1] * scaleFactor;
+                vertex.z = star.pos[2] * scaleFactor;
+                vertex.multiplyScalar( r );
+
+                starsGeometry[ 0 ].vertices.push( vertex );
+                
+                // var radius = Math.floor(Math.random() * (100 - 20 + 1)) + 20;
+                // var randomSpectral = Math.floor(Math.random() * (2 - 0 + 1)) + 0;
+            }
+
+            var starParticles;
+            var starsMaterials = [
+            new THREE.PointsMaterial( { color: 0xffffff, size: 1} ),
+            new THREE.PointsMaterial( { color: 0xffffff, size: 2} ),
+            new THREE.PointsMaterial( { color: 0xE2E2E2, size: 1} ),
+            new THREE.PointsMaterial( { color: 0xD5D5D5, size: 1} ),
+            new THREE.PointsMaterial( { color: 0x1a1a1a, size: 2} ),
+            new THREE.PointsMaterial( { color: 0x1a1a1a, size: 1} )
+            ];
+
+           for ( i = 10; i < 30; i ++ ) {
+
+            starParticles = new THREE.Points( starsGeometry[ i % 2 ], starsMaterials[ i % 6 ] );
+
+            starParticles.rotation.x = Math.random() * 6;
+            starParticles.rotation.y = Math.random() * 6;
+            starParticles.rotation.z = Math.random() * 6;
+
+            // s = i * 10;
+            // starParticles.scale.set( s, s, s );
+
+            //starParticles.matrixAutoUpdate = false;
+            //starParticles.updateMatrix();
+
+                starContainer.add(starParticles);
+            }
+
+            scene.add(starContainer);
+            
+            
+            var galaxy = new THREE.Object3D();
+            
+            this.sun = makeSun(10, 1, shaderList, new THREE.Vector3(0,0,0));
+            galaxy.add(sun);
+            
+            // checking what is galaxy
+            console.log("stars[] has " + stars.length + " stars.");
+            console.log("galaxy children.");
+            console.log(galaxy.children);
+
+            scene.add(galaxy);
+            
+            /*
+            * DRAW
+            * CONSTELLATION
+            * CODE
+            */
+
+            var mat = new THREE.LineBasicMaterial({
+                color: '#40e0d0'
+            });
+
+        var httpRequest = new XMLHttpRequest();
+        var httpRequest2 = new XMLHttpRequest();
+        httpRequest2.onreadystatechange = function() {
+            if (httpRequest2.readyState === 4) {
+        constellationData = JSON.parse(httpRequest2.responseText);
+        for (var k=0; k<constellationData.length; k++) {
+            var con = constellationData[k];
+
+            var stars = con.stars;
+
+            var ppX = stars[0][0].x * scaleFactor,
+            ppY = stars[0][0].y * scaleFactor,
+            ppZ = stars[0][0].z * scaleFactor;
+
+            var pos = new THREE.Vector3( ppX, ppY, ppZ);
+
+            var name = con.abbr;
+            if (con.hasOwnProperty('name')) {
+                name = con.name;
+            }
+
+                        //TODO: add marker
+                        // set marker text color: white, do this in css
+                        Markers.addMarker(pos, name, camera);
+
+                        for (var i=0; i<stars.length; i++) {
+                            var geometry = new THREE.Geometry();
+                            var star = stars[i];
+                            for (var j=0; j<star.length; j++) {
+                                var s = star[j];
+                                var v = new THREE.Vector3(
+                                    s.x * scaleFactor,
+                                    s.y * scaleFactor,
+                                    s.z * scaleFactor);
+                                geometry.vertices.push(v);
+                            }
+
+                            var connector = new THREE.Line(geometry, mat);
+                            connector.name = "Connector"+lineCount;
+                            scene.add(connector);
+                            lineCount++;
+                        }
+                    }
+                    //alert("constellations drawn");
+                }
+            }
+
+            httpRequest.open("GET", starSource);
+            httpRequest.send();
+
+            httpRequest2.open("GET", constellationSource);
+            httpRequest2.send();
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setClearColor( 0x000 ); // black background
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            container.appendChild( renderer.domElement );
+
+            // Lights
+            var light = new THREE.PointLight('#FFFFFF', 1.5);
+            light.position.set(0, 0, 0.3);
+            scene.add(light);
+            var ambient = new THREE.AmbientLight('#292725');
+            scene.add(ambient);
+
+            // Universe Sphere
+            var sphereGeom =  new THREE.SphereGeometry(9000000, 32, 16);
+            var material = new THREE.MeshBasicMaterial({
+                map: THREE.ImageUtils.loadTexture( 'images/milkyway_pan.jpg' ),
+                transparent: false,
+                side: THREE.BackSide
+            });
+            var universe = new THREE.Mesh(sphereGeom.clone(), material);
+            universe.position.set(0, 0, 0);
+            scene.add(universe);
+
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            container.appendChild( stats.domElement );
+
+            // EVENTS
+            window.addEventListener( 'resize', onWindowResize, false );
+            document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+            // CONTROLS
+            cameraControls = new THREE.OrbitControls( camera );
+            cameraControls.target.set( 0, 0, 0 );
+
+        }
+
+        function onWindowResize() {
+
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize( window.innerWidth, window.innerHeight );
+
+        }
+
+        function onDocumentMouseMove( event ) {
+
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+        }
+
+
+        function render() {
+            renderer.clear();
+            shaderTiming = (Date.now() - startTime )/ 1000;
+
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+
+            updateMarkers(Markers.markers, camera);
+            stats.update();
+        }
+
+        
+
+        </script>
+
+        
+
+        
+
+    </body>
+    </html>
