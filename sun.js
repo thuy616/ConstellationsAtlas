@@ -191,7 +191,7 @@ function makeSolarflare( uniforms ){
 	return solarflareMesh;
 }
 
-function makeSun( radius, spectral, inShaderList ){
+function makeSun( radius, spectral, inShaderList, pos3D){
 	
 	shaderList = inShaderList;
 
@@ -245,30 +245,31 @@ function makeSun( radius, spectral, inShaderList ){
   // console.time("make sun solarflare");
 	var solarflare = makeSolarflare( solarflareUniforms );
 	sun.solarflare = solarflare;
-	//sun.add( solarflare );	
+	sun.add( solarflare );	
   // console.timeEnd("make sun solarflare");
 
 	//	2D overlay elements	
-	//gyro = new THREE.Gyroscope();
+	//var gyro = new THREE.Gyroscope();
+
 	//sun.add( gyro );	
-		//sun.gyro = gyro;
+	//	sun.gyro = gyro;
 
     // console.time("make sun lensflare");
-		// var starLensflare = makeStarLensflare(100, 10, spectral);
-		// sun.lensflare = starLensflare;
-		// sun.lensflare.name == 'lensflare';
-		// gyro.add( starLensflare );
+		var starLensflare = makeStarLensflare(100, 10, spectral);
+		sun.lensflare = starLensflare;
+		sun.lensflare.name == 'lensflare';
+	//	gyro.add( starLensflare );
     // console.timeEnd("make sun lensflare");
 
 		//	the corona that lines the edge of the sun sphere
     // console.time("make sun halo");
-		//var starHalo = makeStarHalo( haloUniforms );
-		//gyro.add( starHalo );
+		var starHalo = makeStarHalo( haloUniforms );
+	//	gyro.add( starHalo );
     // console.timeEnd("make sun halo");
 	
     // console.time("make sun glow");
-		//var starGlow = makeStarGlow( coronaUniforms );
-		//gyro.add( starGlow );
+		var starGlow = makeStarGlow( coronaUniforms );
+	//	gyro.add( starGlow );
     // console.timeEnd("make sun glow");
 
     //updateGyro();
@@ -322,14 +323,14 @@ function makeSun( radius, spectral, inShaderList ){
 		this.scale.setLength( index );
 		
 		//	remove old lensflare
-		this.gyro.remove( this.lensflare );
+		//this.gyro.remove( this.lensflare );
 
 		var lensflareSize = 4.0 + index * 0.5 + 0.1 * Math.pow(index,2);
 		if( lensflareSize < 1.5 )
 			lensflareSize = 1.5;
 		this.lensflare = makeStarLensflare( lensflareSize, 0.0002 * index, this.starColor );		
 		this.lensflare.name = 'lensflare';
-		this.gyro.add( this.lensflare );	
+		//this.gyro.add( this.lensflare );	
 	}
 
 	sun.randomizeSolarFlare = function(){
@@ -339,18 +340,20 @@ function makeSun( radius, spectral, inShaderList ){
 
 	sun.setSpectralIndex( spectral );
 
-	sun.update = function(camera){
-		this.camera = camera;
-		this.sunUniforms.time.value = shaderTiming;
-		this.haloUniforms.time.value = shaderTiming;
-		this.solarflareUniforms.time.value = shaderTiming;
+	// sun.update = function(camera){
+	// 	this.camera = camera;
+	// 	this.sunUniforms.time.value = shaderTiming;
+	// 	this.haloUniforms.time.value = shaderTiming;
+	// 	this.solarflareUniforms.time.value = shaderTiming;
 		
-		if( this.gyro.getObjectByName('lensflare') === undefined ){
-			this.gyro.add( this.lensflare );			
-		}
+	// // 	// if( this.gyro.getObjectByName('lensflare') === undefined ){
+	// // 	// 	this.gyro.add( this.lensflare );			
+	// }
 
-		this.gyro.lookAt(this.camera.position);
-	}
+	// 	// this.gyro.lookAt(this.camera.position);
+	// }
+
+	sun.position = pos3D;
 
 	return sun;
 }
