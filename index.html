@@ -17,7 +17,7 @@
 </div>
 <div id ="container"></div>
 <script src="js/jquery.js"></script>
-    <script src="three/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
     <script src="js/controls/OrbitControls.js"></script>
@@ -37,8 +37,9 @@
         var constellationData = new Object();
 
         var lineCount = 0;
-        var STAR_SIZE = 32;
+        var STAR_SIZE = 30;
         var LINE_SIZE = 1;
+        var r = 4;
 
         var vertexShader = $('#vertexshader');
         var fragmentShader = $('#fragmentshader');
@@ -52,7 +53,7 @@
         function init(scaleFactor) {
             container = document.createElement( 'div' );
             document.body.appendChild( container );
-            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 100000000000 );
+            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 1000000000 );
 
             camera.position.set(-0.5, 0, 0);
             camera.lookAt(new THREE.Vector3(-0, -50, 0));
@@ -77,6 +78,7 @@
                                 pY = star.pos[1] * scaleFactor,
                                 pZ = star.pos[2] * scaleFactor;
                         var vertex = new THREE.Vector3(pX, pY, pZ);
+                        vertex.multiplyScalar( r );
                         geometry.vertices.push(vertex);
 
                         colors[i] = new THREE.Color();
@@ -97,57 +99,27 @@
                     texture.minFilter = THREE.NearestFilter;
                     //texture.format = THREE.LuminanceFormat;
                     var starMaterial = new THREE.PointsMaterial({
-                        color: 0xffffff,
+                        //color: 0xffffff,
                         size: STAR_SIZE,
                         map: texture,
                         blending: THREE.AdditiveBlending,
                         transparent: true
                     });
-                    /*
-                    var starMaterial = new THREE.ShaderMaterial( {
-                        uniforms: {
-                            cutoff: { type: 'f', value: 1},
-                            color: { type: 'v3', value: colorsh },
-                            luminosity: { type: 'f', value: lumsh }
-
-                        },
-
-                        vertexShader:   vertexShader.text(),
-                        fragmentShader: fragmentShader.text(),
-                        side: THREE.DoubleSide,
-                        blending: THREE.AdditiveBlending,
-                        transparent: true,
-                        depthTest: true,
-                    });
-                    */
 
                     particles = new THREE.Points(geometry, starMaterial);
                     objectGroup.add(particles);
                 }
             }
 
-
             /*
             * DRAW
             * CONSTELLATION
-            * CODE
             */
 
             var mat = new THREE.LineBasicMaterial({
-                color: '#40e0d0'
+                color: '#40e0d0',
             });
 
-            /*
-            var mat = new THREE.LineBasicMaterial({
-                transparent: true,
-                opacity: 0
-            });
-
-            var transparentMaterial = new THREE.MeshBasicMaterial({
-                transparent: true,
-                opacity:0.0
-            });
-            */
 
             var httpRequest2 = new XMLHttpRequest();
             httpRequest2.onreadystatechange = function() {
