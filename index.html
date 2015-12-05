@@ -17,7 +17,7 @@
 </div>
 <div id ="container"></div>
 <script src="js/jquery.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+    <script src="three/three.min.js"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
     <script src="js/controls/OrbitControls.js"></script>
@@ -254,45 +254,6 @@
         function render() {
             requestAnimationFrame(render);
             renderer.render(scene, camera);
-
-            // find intersections
-
-
-            /*
-            var objs = [];
-            var r_geometry = [];
-            var r_attributes = [];
-            for (var i=0; i<lineCount; i++) {
-                objs.push(scene.getObjectByName("Connector" + i));
-                r_geometry = objs[i].geometry;
-                console.log("check: " + r_geometry);
-                r_attributes = r_geometry.attributes;
-            }
-
-            raycaster.setFromCamera( mouse, camera );
-
-            var intersects = raycaster.intersectObjects( objs );
-
-            if ( intersects.length > 0 ) {
-
-                if ( INTERSECTED != intersects[ 0 ].index ) {
-
-                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
-
-                    INTERSECTED = intersects[ 0 ].index;
-
-                    r_attributes.size.array[ INTERSECTED ] = LINE_SIZE * 2;
-                    r_attributes.size.needsUpdate = true;
-                }
-
-            }
-            else if ( INTERSECTED !== null ) {
-                r_attributes.size.array[ INTERSECTED ] = LINE_SIZE;
-                r_attributes.size.needsUpdate = true;
-                INTERSECTED = null;
-
-            }
-            */
 
 
             renderer.render( scene, camera );

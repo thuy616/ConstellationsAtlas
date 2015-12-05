@@ -10,7 +10,7 @@
     <div id ="container"></div>
     <img id="gradientImage" src="images/star_color_modified.png" style="display:none"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+    <script src="three/three.min.js"></script>
     <script src="data/stars.json"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
@@ -393,53 +393,53 @@
                 time:           { type: "f", value: 0 },
                 spectralLookup: { type: "f", value: 0 },        
             };
-            for (var j = 0; j<stars.length ;j++) {
-                var star = stars[j];
+           //  for (var j = 0; j<stars.length ;j++) {
+           //      var star = stars[j];
 
-                var vertex = new THREE.Vector3();
-                vertex.x = star.pos[0] * scaleFactor;
-                vertex.y = star.pos[1] * scaleFactor;
-                vertex.z = star.pos[2] * scaleFactor;
-                vertex.multiplyScalar( r );
+           //      var vertex = new THREE.Vector3();
+           //      vertex.x = star.pos[0] * scaleFactor;
+           //      vertex.y = star.pos[1] * scaleFactor;
+           //      vertex.z = star.pos[2] * scaleFactor;
+           //      vertex.multiplyScalar( r );
 
-                if (Math.abs(vertex.x)>200 && 
-                    Math.abs(vertex.y)>200 &&
-                    Math.abs(vertex.z)>200) {
+           //      if (Math.abs(vertex.x)>200 && 
+           //          Math.abs(vertex.y)>200 &&
+           //          Math.abs(vertex.z)>200) {
 
-                    starsGeometry[ 0 ].vertices.push( vertex );
-                }
+           //          starsGeometry[ 0 ].vertices.push( vertex );
+           //      }
                 
                 
-            }
+           //  }
             
-            var starParticles;
-            var starsMaterials = [
-            new THREE.PointsMaterial( { color: 0xffffff, size: 1} ),
-            new THREE.PointsMaterial( { color: 0xffffff, size: 2} ),
-            new THREE.PointsMaterial( { color: 0xE2E2E2, size: 1} ),
-            new THREE.PointsMaterial( { color: 0xD5D5D5, size: 1} ),
-            new THREE.PointsMaterial( { color: 0x1a1a1a, size: 2} ),
-            new THREE.PointsMaterial( { color: 0x1a1a1a, size: 1} )
-            ];
+           //  var starParticles;
+           //  var starsMaterials = [
+           //  new THREE.PointsMaterial( { color: 0xffffff, size: 1} ),
+           //  new THREE.PointsMaterial( { color: 0xffffff, size: 2} ),
+           //  new THREE.PointsMaterial( { color: 0xE2E2E2, size: 1} ),
+           //  new THREE.PointsMaterial( { color: 0xD5D5D5, size: 1} ),
+           //  new THREE.PointsMaterial( { color: 0x1a1a1a, size: 2} ),
+           //  new THREE.PointsMaterial( { color: 0x1a1a1a, size: 1} )
+           //  ];
 
-           for ( i = 10; i < 30; i ++ ) {
+           // for ( i = 10; i < 30; i ++ ) {
 
-            starParticles = new THREE.Points( starsGeometry[ i % 2 ], starsMaterials[ i % 6 ] );
+           //  starParticles = new THREE.Points( starsGeometry[ i % 2 ], starsMaterials[ i % 6 ] );
 
-            starParticles.rotation.x = Math.random() * 6;
-            starParticles.rotation.y = Math.random() * 6;
-            starParticles.rotation.z = Math.random() * 6;
+           //  starParticles.rotation.x = Math.random() * 6;
+           //  starParticles.rotation.y = Math.random() * 6;
+           //  starParticles.rotation.z = Math.random() * 6;
 
-            // s = i * 10;
-            // starParticles.scale.set( s, s, s );
+           //  // s = i * 10;
+           //  // starParticles.scale.set( s, s, s );
 
-            //starParticles.matrixAutoUpdate = false;
-            //starParticles.updateMatrix();
+           //  //starParticles.matrixAutoUpdate = false;
+           //  //starParticles.updateMatrix();
 
-                starContainer.add(starParticles);
-            }
+           //      starContainer.add(starParticles);
+           //  }
 
-            galaxy.add(starContainer);
+           //  galaxy.add(starContainer);
 
             for (var j=0; j<3000; j++) {
                 var ran = Math.floor(Math.random() * (stars.length - 100 + 1));

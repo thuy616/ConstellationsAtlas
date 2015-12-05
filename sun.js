@@ -333,10 +333,10 @@ function makeSun( radius, spectral, inShaderList){
 		//this.gyro.add( this.lensflare );	
 	}
 
-	sun.randomizeSolarFlare = function(){
-		this.solarflare.rotation.x = Math.random() * Math.PI * 2;
-		this.solarflare.rotation.y = Math.random() * Math.PI * 2;
-	}
+	// sun.randomizeSolarFlare = function(){
+	// 	this.solarflare.rotation.x = Math.random() * Math.PI * 2;
+	// 	this.solarflare.rotation.y = Math.random() * Math.PI * 2;
+	// }
 
 	sun.setSpectralIndex( spectral );
 

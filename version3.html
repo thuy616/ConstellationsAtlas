@@ -10,7 +10,7 @@
     <div id ="container"></div>
     <img id="gradientImage" src="images/star_color_modified.png" style="display:none"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+    <script src="three/three.min.js"></script>
     <script src="data/stars.json"></script>
     <script src="js/renderers/Projector.js"></script>
     <script src="js/stats.min.js"></script>
@@ -395,23 +395,14 @@
             };
         
 
-            for (var j=0; j<1500; j++) {
+            for (var j=0; j<5000; j++) {
                 var ran = Math.floor(Math.random() * (stars.length - 100 + 1));
                 var s = stars[ran];
             
-                    var radius = Math.floor(Math.random() * (10 - 1 + 1)) + 1;
-                    // if (Math.abs(vertex.x)>1000  && Math.abs(vertex.y) && Math.abs(vertex.z)) {
-                    //     radius = Math.floor(Math.random() * (100 - 20 + 1)) + 20;
-                    // }
-                    
-                    var geometry = new THREE.SphereGeometry( radius, 16, 16 );
-                    var smaterial = new THREE.ShaderMaterial( {
-                        color:       0xffffff,
-                        vertexShader:   shaderList.starsurface.vertex,
-                        fragmentShader: shaderList.starsurface.fragment,
-                    });
-                    var sphere = new THREE.Mesh( geometry, smaterial );
-
+                    var radius = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
+                    var spectral = Math.floor(Math.random() * (2-0+1));
+                   
+                    var sphere = makeSun(radius, spectral, shaderList);
                     px = s.pos[0] * scaleFactor;
                     py = s.pos[1] * scaleFactor;
                     pz = s.pos[2] * scaleFactor;
@@ -432,7 +423,7 @@
             var i, r = 100, starsGeometry = [ new THREE.Geometry(), new THREE.Geometry() ];
 			var starContainer = new THREE.Object3D();
 
-			for ( i = 0; i < 100000; i ++ ) {
+			for ( i = 0; i < 80000; i ++ ) {
 
 				var vertex = new THREE.Vector3();
 				vertex.x = Math.random() * 2 - 1;
