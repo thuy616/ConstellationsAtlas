@@ -191,7 +191,7 @@ function makeSolarflare( uniforms ){
 	return solarflareMesh;
 }
 
-function makeSun( radius, spectral, inShaderList, pos3D){
+function makeSun( radius, spectral, inShaderList){
 	
 	shaderList = inShaderList;
 
@@ -233,8 +233,8 @@ function makeSun( radius, spectral, inShaderList, pos3D){
 
 
 	// point light!
-	var light = new THREE.PointLight(0xffffff, 1, 200);
-	sun.add(light);
+	//var light = new THREE.PointLight(0xffffff, 1, 200);
+	//sun.add(light);
 
 	//	the actual glowy ball of fire
   // console.time("make sun surface");
@@ -243,9 +243,9 @@ function makeSun( radius, spectral, inShaderList, pos3D){
   // console.timeEnd("make sun surface");
 
   // console.time("make sun solarflare");
-	var solarflare = makeSolarflare( solarflareUniforms );
-	sun.solarflare = solarflare;
-	sun.add( solarflare );	
+	// var solarflare = makeSolarflare( solarflareUniforms );
+	// sun.solarflare = solarflare;
+	// sun.add( solarflare );	
   // console.timeEnd("make sun solarflare");
 
 	//	2D overlay elements	
@@ -255,50 +255,50 @@ function makeSun( radius, spectral, inShaderList, pos3D){
 	//	sun.gyro = gyro;
 
     // console.time("make sun lensflare");
-		var starLensflare = makeStarLensflare(100, 10, spectral);
-		sun.lensflare = starLensflare;
-		sun.lensflare.name == 'lensflare';
+		// var starLensflare = makeStarLensflare(100, 10, spectral);
+		// sun.lensflare = starLensflare;
+		// sun.lensflare.name == 'lensflare';
 	//	gyro.add( starLensflare );
     // console.timeEnd("make sun lensflare");
 
 		//	the corona that lines the edge of the sun sphere
     // console.time("make sun halo");
-		var starHalo = makeStarHalo( haloUniforms );
+		// var starHalo = makeStarHalo( haloUniforms );
 	//	gyro.add( starHalo );
     // console.timeEnd("make sun halo");
 	
     // console.time("make sun glow");
-		var starGlow = makeStarGlow( coronaUniforms );
+		// var starGlow = makeStarGlow( coronaUniforms );
 	//	gyro.add( starGlow );
     // console.timeEnd("make sun glow");
 
     //updateGyro();
 
-	var latticeMaterial = new THREE.MeshBasicMaterial({
-		map: glowSpanTexture,
-		blending: THREE.AdditiveBlending,
-		transparent: true,
-		depthTest: true,
-		depthWrite: true,		
-		wireframe: false,
-		opacity: 0.8,
-	});
+	// var latticeMaterial = new THREE.MeshBasicMaterial({
+	// 	map: glowSpanTexture,
+	// 	blending: THREE.AdditiveBlending,
+	// 	transparent: true,
+	// 	depthTest: true,
+	// 	depthWrite: true,		
+	// 	wireframe: false,
+	// 	opacity: 0.8,
+	// });
 
-	var lattice = new THREE.Mesh( new THREE.IcosahedronGeometry( 7.35144, 2), latticeMaterial );
-	lattice.update = function(){
-		this.rotation.y += 0.001;
-		this.rotation.z -= 0.0009;
-		this.rotation.x -= 0.0004;
-	}
-	lattice.material.map.wrapS = THREE.RepeatWrapping;
-	lattice.material.map.wrapT = THREE.RepeatWrapping;
-	lattice.material.map.needsUpdate = true;
-	lattice.material.map.onUpdate = function(){
-		this.offset.y -= 0.01;
-		this.needsUpdate = true;
-	}
+	// var lattice = new THREE.Mesh( new THREE.IcosahedronGeometry( 7.35144, 2), latticeMaterial );
+	// lattice.update = function(){
+	// 	this.rotation.y += 0.001;
+	// 	this.rotation.z -= 0.0009;
+	// 	this.rotation.x -= 0.0004;
+	// }
+	// lattice.material.map.wrapS = THREE.RepeatWrapping;
+	// lattice.material.map.wrapT = THREE.RepeatWrapping;
+	// lattice.material.map.needsUpdate = true;
+	// lattice.material.map.onUpdate = function(){
+	// 	this.offset.y -= 0.01;
+	// 	this.needsUpdate = true;
+	// }
 
-	sun.add(lattice);
+	// sun.add(lattice);
 
 	sun.sunUniforms = sunUniforms;
 	sun.solarflareUniforms = solarflareUniforms;
@@ -325,11 +325,11 @@ function makeSun( radius, spectral, inShaderList, pos3D){
 		//	remove old lensflare
 		//this.gyro.remove( this.lensflare );
 
-		var lensflareSize = 4.0 + index * 0.5 + 0.1 * Math.pow(index,2);
-		if( lensflareSize < 1.5 )
-			lensflareSize = 1.5;
-		this.lensflare = makeStarLensflare( lensflareSize, 0.0002 * index, this.starColor );		
-		this.lensflare.name = 'lensflare';
+		// var lensflareSize = 4.0 + index * 0.5 + 0.1 * Math.pow(index,2);
+		// if( lensflareSize < 1.5 )
+		// 	lensflareSize = 1.5;
+		// this.lensflare = makeStarLensflare( lensflareSize, 0.0002 * index, this.starColor );		
+		// this.lensflare.name = 'lensflare';
 		//this.gyro.add( this.lensflare );	
 	}
 
@@ -352,8 +352,6 @@ function makeSun( radius, spectral, inShaderList, pos3D){
 
 	// 	// this.gyro.lookAt(this.camera.position);
 	// }
-
-	sun.position = pos3D;
 
 	return sun;
 }

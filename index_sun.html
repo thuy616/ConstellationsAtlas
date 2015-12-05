@@ -18,12 +18,7 @@
     <script src="js/marker.js"></script>
     <script src="lensflare.js"></script>
     <script src="sun.js"></script>
-    <script src="js/MTLLoader.js"></script>
-    <script src="js/OBJMTLLoader.js"></script>
-    <script src="js/OBJLoader.js"></script>
-    <script src="js/ShaderParticles.js"></script>
 
-    
     <script type="x-shader/x-vertex" id="starflare_v">
         
 
@@ -328,7 +323,7 @@
     var cameraControls;
     var starSource = "data/stars.json";
     var constellationSource = "data/constellations.json";
-    var scale = 20;
+    var scale = 40;
     var mouse = new THREE.Vector2();
     var INTERSECTED;
 
@@ -337,7 +332,6 @@
     var constellationData = new Object();
 
     var lineCount = 0;
-    var STAR_SIZE = 15;
     var LINE_SIZE = 1;
 
     var shaderList = new Object();
@@ -380,19 +374,25 @@
             document.body.appendChild( container );
             camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 100000000000 );
 
-            camera.position.set(0.5, 0, -0.5);
-            camera.lookAt(new THREE.Vector3(0, 0, -100));
-
-
-            var star3ds = [];
+            camera.position.set(-0.5, 0, 0);
+            camera.lookAt(new THREE.Vector3(0, -50, -100));
             
-            var min = 1;
-            var max = 40;
-
-            var i, r = 4, starsGeometry = [ new THREE.Geometry(), new THREE.Geometry() ];
+            var i, r = 10, starsGeometry = [ new THREE.Geometry(), new THREE.Geometry() ];
             var starContainer = new THREE.Object3D();
+            var galaxy = new THREE.Object3D();
             
 
+            var sunTexture = THREE.ImageUtils.loadTexture( "images/sun_surface.png");
+            sunTexture.anisotropy = 1;
+            sunTexture.wrapS = sunTexture.wrapT = THREE.RepeatWrapping;
+            
+            var sunUniforms = {
+                texturePrimary:   { type: "t", value: sunTexture },
+                textureColor:   { type: "t", value: THREE.ImageUtils.loadTexture( "images/star_colorshift.png" )},
+                textureSpectral: { type: "t", value: 1 },
+                time:           { type: "f", value: 0 },
+                spectralLookup: { type: "f", value: 0 },        
+            };
             for (var j = 0; j<stars.length ;j++) {
                 var star = stars[j];
 
@@ -402,12 +402,16 @@
                 vertex.z = star.pos[2] * scaleFactor;
                 vertex.multiplyScalar( r );
 
-                starsGeometry[ 0 ].vertices.push( vertex );
-                
-                // var radius = Math.floor(Math.random() * (100 - 20 + 1)) + 20;
-                // var randomSpectral = Math.floor(Math.random() * (2 - 0 + 1)) + 0;
-            }
+                if (Math.abs(vertex.x)>200 && 
+                    Math.abs(vertex.y)>200 &&
+                    Math.abs(vertex.z)>200) {
 
+                    starsGeometry[ 0 ].vertices.push( vertex );
+                }
+                
+                
+            }
+            
             var starParticles;
             var starsMaterials = [
             new THREE.PointsMaterial( { color: 0xffffff, size: 1} ),
@@ -435,19 +439,42 @@
                 starContainer.add(starParticles);
             }
 
-            scene.add(starContainer);
+            galaxy.add(starContainer);
+
+            for (var j=0; j<3000; j++) {
+                var ran = Math.floor(Math.random() * (stars.length - 100 + 1));
+                var s = stars[ran];
             
+                    var radius = Math.floor(Math.random() * (10 - 1 + 1)) + 1;
+                    // if (Math.abs(vertex.x)>1000  && Math.abs(vertex.y) && Math.abs(vertex.z)) {
+                    //     radius = Math.floor(Math.random() * (100 - 20 + 1)) + 20;
+                    // }
+                    
+                    var geometry = new THREE.SphereGeometry( radius, 16, 16 );
+                    var smaterial = new THREE.ShaderMaterial( {
+                        color:       0xffffff,
+                        vertexShader:   shaderList.starsurface.vertex,
+                        fragmentShader: shaderList.starsurface.fragment,
+                    });
+                    var sphere = new THREE.Mesh( geometry, smaterial );
+
+                    px = s.pos[0] * scaleFactor;
+                    py = s.pos[1] * scaleFactor;
+                    pz = s.pos[2] * scaleFactor;
+                    
+
+                    sphere.position.copy(new THREE.Vector3(px, py, pz));
+                    sphere.updateMatrix();
+                    galaxy.add(sphere);
+                 
+             }
             
-            var galaxy = new THREE.Object3D();
+            this.sun = makeSun(50, 1, shaderList);
             
-            this.sun = makeSun(10, 1, shaderList, new THREE.Vector3(0,0,0));
+            this.sun.position.copy(new THREE.Vector3(50,0,0));
+            this.sun.updateMatrix();
             galaxy.add(sun);
             
-            // checking what is galaxy
-            console.log("stars[] has " + stars.length + " stars.");
-            console.log("galaxy children.");
-            console.log(galaxy.children);
-
             scene.add(galaxy);
             
             /*
@@ -519,9 +546,9 @@
             container.appendChild( renderer.domElement );
 
             // Lights
-            var light = new THREE.PointLight('#FFFFFF', 1.5);
-            light.position.set(0, 0, 0.3);
-            scene.add(light);
+            // var light = new THREE.PointLight('#FFFFFF', 1.5);
+            // light.position.set(0, 0, 0.3);
+            //scene.add(light);
             var ambient = new THREE.AmbientLight('#292725');
             scene.add(ambient);
 
@@ -585,13 +612,7 @@
             stats.update();
         }
 
-        
-
         </script>
-
-        
-
-        
 
     </body>
     </html>
