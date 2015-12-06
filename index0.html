@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>3D Starry Night - Explore the Universe</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id='menu'>
+    <button id='rm1' onclick='removebg(1)'>Add BG</button>
+    <button id='rm2' onclick='removebg(2)'>Remove BG</button>
+    <!-- <button id='rm3' onclick='removebg(3)'>Add Const</button>
+    <button id='rm4' onclick='removebg(4)'>Remove Const</button> -->
+    <button id='rm5' onclick='removebg(5)'>Add Stars</button>
+    <button id='rm6' onclick='removebg(6)'>Remove Stars</button>
+</div>
+<div id ="container"></div>
+<script src="js/jquery.js"></script>
+    <script src="three/three.min.js"></script>
+    <script src="js/renderers/Projector.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/controls/OrbitControls.js"></script>
+    <script src="js/marker.js"></script>
+    <script>
+        var container, stats;
+        var camera, scene, renderer, raycaster;
+        var cameraControls;
+        var starSource = "data/stars2.json";
+        var constellationSource = "data/constellations.json";
+        var scale = 40;
+        var mouse = new THREE.Vector2();
+        var INTERSECTED;
+
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+        var constellationData = new Object();
+
+        var lineCount = 0;
+        var STAR_SIZE = 40;
+        var LINE_SIZE = 1;
+        var r = 1.5;
+
+        var vertexShader = $('#vertexshader');
+        var fragmentShader = $('#fragmentshader');
+        var objectGroup = new THREE.Object3D;
+        var universe, connector;
+        var starContainer=[];
+        init(scale);
+        render();
+
+        // read stars coordinates from stars.json
+        function init(scaleFactor) {
+            container = document.createElement( 'div' );
+            document.body.appendChild( container );
+            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 1000000000 );
+
+            camera.position.set(-0.5, 0, 0);
+            camera.lookAt(new THREE.Vector3(-0, -50, 0));
+
+            scene = new THREE.Scene();
+
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.onreadystatechange = function() {
+                if (httpRequest.readyState === 4) {
+                    //parse JSON data
+                    var stars = JSON.parse(httpRequest.responseText);
+
+                    var geometry = new THREE.Geometry();
+                    stars.forEach(function(star, i) {
+                        var pX = star.pos[0] * scaleFactor,
+                                pY = star.pos[1] * scaleFactor,
+                                pZ = star.pos[2] * scaleFactor;
+                        var vertex = new THREE.Vector3(pX, pY, pZ);
+                        vertex.multiplyScalar( r );
+                        geometry.vertices.push(vertex);
+                    });
+                    var texture = THREE.ImageUtils.loadTexture( "images/particle4.png" );
+                    texture.mapping = THREE.SphericalReflectionMapping;
+                    texture.magFilter = THREE.LinearFilter;
+                    texture.minFilter = THREE.NearestFilter;
+                    var starMaterial = new THREE.PointsMaterial({
+                        size: STAR_SIZE,
+                        map: texture,
+                        blending: THREE.AdditiveBlending,
+                        transparent: true
+                    });
+                    starContainer = new THREE.Points(geometry, starMaterial);
+
+                    objectGroup.add(starContainer);
+                }
+            }
+
+            /*
+            * DRAW
+            * CONSTELLATION
+            */
+
+            var mat = new THREE.LineBasicMaterial({
+                color: '#40e0d0',
+            });
+
+
+            var httpRequest2 = new XMLHttpRequest();
+            httpRequest2.onreadystatechange = function() {
+                if (httpRequest2.readyState === 4) {
+                    constellationData = JSON.parse(httpRequest2.responseText);
+                    for (var k=0; k<constellationData.length; k++) {
+                        var con = constellationData[k];
+
+                        var stars = con.stars;
+
+                        var ppX = stars[0][0].x * scaleFactor,
+                            ppY = stars[0][0].y * scaleFactor,
+                            ppZ = stars[0][0].z * scaleFactor;
+
+                        var pos = new THREE.Vector3( ppX, ppY, ppZ);
+
+                        var name = con.abbr;
+                        if (con.hasOwnProperty('name')) {
+                            name = con.name;
+                        }
+
+                        //TODO: add marker
+                        // set marker text color: white, do this in css
+                        Markers.addMarker(pos, name, camera);
+
+                        for (var i=0; i<stars.length; i++) {
+                            var geometry = new THREE.Geometry();
+                            var star = stars[i];
+                            for (var j=0; j<star.length; j++) {
+                                var s = star[j];
+                                var v = new THREE.Vector3(
+                                        s.x * scaleFactor,
+                                        s.y * scaleFactor,
+                                        s.z * scaleFactor);
+                                geometry.vertices.push(v);
+                            }
+
+                            connector = new THREE.Line(geometry, mat);
+                            connector.name = "Connector"+lineCount;
+                            objectGroup.add(connector);
+                            lineCount++;
+                        }
+                    }
+                    //alert("constellations drawn");
+                }
+            }
+
+            httpRequest.open("GET", starSource);
+            httpRequest.send();
+
+            httpRequest2.open("GET", constellationSource);
+            httpRequest2.send();
+
+            raycaster = new THREE.Raycaster();
+            renderer = new THREE.WebGLRenderer();
+            renderer.setClearColor( 0x000 ); // black background
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            container.appendChild( renderer.domElement );
+
+            // Lights
+            var light = new THREE.PointLight('#FFFFFF', 1.5);
+            light.position.set(0, 0, 0.3);
+            scene.add(light);
+            var ambient = new THREE.AmbientLight('#292725');
+            scene.add(ambient);
+
+            // Universe Sphere
+            var sphereGeom =  new THREE.SphereGeometry(9000000, 32, 16);
+            var texture = THREE.ImageUtils.loadTexture( "images/milkyway_pan.jpg" );
+                    texture.magFilter = THREE.LinearFilter;
+                    texture.minFilter = THREE.NearestFilter;
+            var material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: false,
+                side: THREE.BackSide
+            });
+            universe = new THREE.Mesh(sphereGeom.clone(), material);
+            universe.position.set(0, 0, 0);
+            objectGroup.add(universe);
+
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.bottom = '0px';
+            container.appendChild( stats.domElement );
+
+            // EVENTS
+            window.addEventListener( 'resize', onWindowResize, false );
+            document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+            // CONTROLS
+            cameraControls = new THREE.OrbitControls( camera );
+            cameraControls.target.set( 0, 0, 0 );
+            scene.add(objectGroup);
+
+
+        }
+
+        function removebg(cm){
+            console.log(cm)
+            switch(cm) {
+                case 1:{objectGroup.add(universe);$("#rm1").disabled=true;$("#rm2").disabled=false;}break;
+                case 2:{objectGroup.remove(universe);$("#rm2").disabled=true;$("#rm1").disabled=false;}break;
+                case 3:{objectGroup.add(connector);$("#rm3").disabled=true;$("#rm4").disabled=false;Markers.showMarkers();render();}break;
+                case 4:{objectGroup.remove(connector);$("#rm4").disabled=true;$("#rm3").disabled=false;Markers.hideMarkers();render();}break;
+                case 5:{objectGroup.add(starContainer);$("#rm5").disabled=true;$("#rm6").disabled=false;}break;
+                case 6:{objectGroup.remove(starContainer);$("#rm6").disabled=true;$("#rm5").disabled=false;}break;
+            }
+            
+        }
+        function onWindowResize() {
+
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize( window.innerWidth, window.innerHeight );
+
+        }
+
+        function onDocumentMouseMove( event ) {
+
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+        }
+
+        function render() {
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+
+
+            renderer.render( scene, camera );
+
+            updateMarkers(Markers.markers, camera);
+            stats.update();
+
+        }
+    </script>
+
+    <script type="x-shader/x-vertex" id="vertexshader">
+        uniform vec3 color;
+        uniform float luminosity
+        varying vec3 vColor;
+        varying float vDist;
+        varying float vLum;
+
+        void main() {
+            vColor = color;
+            vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000.0;
+            vLum = luminosity / 70.0;
+            gl_PointSize = 1.0 + (10.0 * vLum / vDist); //size of the star
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentshader">
+        uniform float cutoff;
+        varying vec3 vColor;
+        varying float vDist;
+        varying float vLum;
+
+        void main() {
+            float radius = distance( vec2(0.5,0.5), gl_PointCoord );
+            if ( radius > 0.5 ) {
+                discard;
+            }
+            float intensity = 1.0 + vLum - vDist;
+            if( radius < cutoff){
+                gl_FragColor = vec4( vec3(1.0,1.0,1.0) * intensity, 1.0);
+            } else {
+                float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
+                gl_FragColor = vec4( vColor*intensity, alpha);
+            }
+        }
+    </script>
+
+</body>
+</html>

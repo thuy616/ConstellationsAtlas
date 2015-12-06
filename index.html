@@ -1,307 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>3D Starry Night - Explore the Universe</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Constellation Atlas</title>
+
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
 </head>
 <body>
-<div id='menu'>
-    <button id='rm1' onclick='removebg(1)'>Add BG</button>
-    <button id='rm2' onclick='removebg(2)'>Remove BG</button>
-    <!-- <button id='rm3' onclick='removebg(3)'>Add Const</button>
-    <button id='rm4' onclick='removebg(4)'>Remove Const</button> -->
-    <button id='rm5' onclick='removebg(5)'>Add Stars</button>
-    <button id='rm6' onclick='removebg(6)'>Remove Stars</button>
-</div>
-<div id ="container"></div>
-<script src="js/jquery.js"></script>
-    <script src="three/three.min.js"></script>
-    <script src="js/renderers/Projector.js"></script>
-    <script src="js/stats.min.js"></script>
-    <script src="js/controls/OrbitControls.js"></script>
-    <script src="js/marker.js"></script>
-    <script>
-        var container, stats;
-        var camera, scene, renderer, raycaster;
-        var cameraControls;
-        var starSource = "data/stars2.json";
-        var constellationSource = "data/constellations.json";
-        var scale = 40;
-        var mouse = new THREE.Vector2();
-        var INTERSECTED;
+  
+  <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h1 class="header center orange-text">Constellation Atlas</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">The Constellation Atlas is a virtual simulation of the universe on the web using Three.js. We implemented two versions of the Constellation Atlas respectively to two approaches, one uses Points class with basic 2D texture for each star while the other employs a more advanced custom shaders for SphereGeometry objects.</h5>
+      </div>
+      
+      <br><br>
 
-        var windowHalfX = window.innerWidth / 2;
-        var windowHalfY = window.innerHeight / 2;
-        var constellationData = new Object();
-
-        var lineCount = 0;
-        var STAR_SIZE = 30;
-        var LINE_SIZE = 1;
-        var r = 4;
-
-        var vertexShader = $('#vertexshader');
-        var fragmentShader = $('#fragmentshader');
-        var objectGroup = new THREE.Object3D;
-        var universe, connector;
-        var particles=[];
-        init(scale);
-        render();
-
-        // read stars coordinates from stars.json
-        function init(scaleFactor) {
-            container = document.createElement( 'div' );
-            document.body.appendChild( container );
-            camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 1000000000 );
-
-            camera.position.set(-0.5, 0, 0);
-            camera.lookAt(new THREE.Vector3(-0, -50, 0));
-
-            scene = new THREE.Scene();
-
-            
-            var geometry = new THREE.Geometry();
-
-            var httpRequest = new XMLHttpRequest();
-            httpRequest.onreadystatechange = function() {
-                if (httpRequest.readyState === 4) {
-                    //parse JSON data
-                    var stars = JSON.parse(httpRequest.responseText);
-
-                    var colors = [];
-                    var colorsh = [];
-                    var lumsh = [];
-                    
-                    stars.forEach(function(star, i) {
-                        var pX = star.pos[0] * scaleFactor,
-                                pY = star.pos[1] * scaleFactor,
-                                pZ = star.pos[2] * scaleFactor;
-                        var vertex = new THREE.Vector3(pX, pY, pZ);
-                        vertex.multiplyScalar( r );
-                        geometry.vertices.push(vertex);
-
-                        colors[i] = new THREE.Color();
-                        var intc = star.color;
-                        colors[i].setRGB(intc[0]/255, intc[1]/255, intc[2]/255);
-                        colorsh[i] = [intc[0]/255, intc[1]/255, intc[2]/255];
-                        lumsh[i] = Math.pow(star.luminosity, 0.25);
-
-                        //TODO: add label
-                    });
-
-                    geometry.colors = colors;
-                    var texture = THREE.ImageUtils.loadTexture( "images/particle4.png" );
-                    //texture.wrapS = THREE.RepeatWrapping;
-                    //texture.wrapT = THREE.ClampToEdgeWrapping;
-                    texture.mapping = THREE.SphericalReflectionMapping;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.minFilter = THREE.NearestFilter;
-                    //texture.format = THREE.LuminanceFormat;
-                    var starMaterial = new THREE.PointsMaterial({
-                        //color: 0xffffff,
-                        size: STAR_SIZE,
-                        map: texture,
-                        blending: THREE.AdditiveBlending,
-                        transparent: true
-                    });
-
-                    particles = new THREE.Points(geometry, starMaterial);
-                    objectGroup.add(particles);
-                }
-            }
-
-            /*
-            * DRAW
-            * CONSTELLATION
-            */
-
-            var mat = new THREE.LineBasicMaterial({
-                color: '#40e0d0',
-            });
+    </div>
+  </div>
 
 
-            var httpRequest2 = new XMLHttpRequest();
-            httpRequest2.onreadystatechange = function() {
-                if (httpRequest2.readyState === 4) {
-                    constellationData = JSON.parse(httpRequest2.responseText);
-                    for (var k=0; k<constellationData.length; k++) {
-                        var con = constellationData[k];
+  <div class="container">
+    <div class="section">
 
-                        var stars = con.stars;
+      <!--   Icon Section   -->
+      <div class="row">
+        <div class="col s12 m6">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">flash_on</i></h2>
+            <h5 class="center">Version 1 - Light-weight Approach</h5>
 
-                        var ppX = stars[0][0].x * scaleFactor,
-                            ppY = stars[0][0].y * scaleFactor,
-                            ppZ = stars[0][0].z * scaleFactor;
+            <p class="light">This implementation uses THREE.Points and basic texture. The resulting system is light-weight but lacks visual appeal.</p>
+            <br>
 
-                        var pos = new THREE.Vector3( ppX, ppY, ppZ);
+             <div class="row center">
+              <image src="images/demo/version1.png" width="100%"/>
+            <a href="index0.html">Visit Version 1</a>
+          </div>
+          </div>
+         
+          
+        </div>
 
-                        var name = con.abbr;
-                        if (con.hasOwnProperty('name')) {
-                            name = con.name;
-                        }
+        <div class="col s12 m6">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">group</i></h2>
+            <h5 class="center">Version 2 - Realistic Approach</h5>
 
-                        //TODO: add marker
-                        // set marker text color: white, do this in css
-                        Markers.addMarker(pos, name, camera);
+            <p class="light">Each star is an instance of THREE.SphereGeometry and more advanced texture mapping is used. The resulting system is heavy on the performance side but each star has better look and feel.</p>
 
-                        for (var i=0; i<stars.length; i++) {
-                            var geometry = new THREE.Geometry();
-                            var star = stars[i];
-                            for (var j=0; j<star.length; j++) {
-                                var s = star[j];
-                                var v = new THREE.Vector3(
-                                        s.x * scaleFactor,
-                                        s.y * scaleFactor,
-                                        s.z * scaleFactor);
-                                geometry.vertices.push(v);
-                            }
+            <div class="row center">
+              <img src="images/demo/version2.png" width="92%"/>
+              <br>
+            <a href="version2.html">Visit Version 2</a>
+          </div>
 
-                            connector = new THREE.Line(geometry, mat);
-                            connector.name = "Connector"+lineCount;
-                            objectGroup.add(connector);
-                            lineCount++;
-                        }
-                    }
-                    //alert("constellations drawn");
-                }
-            }
+          </div>
+           
+        </div>
 
-            httpRequest.open("GET", starSource);
-            httpRequest.send();
+        
+      </div>
+      <div class="section">
+        <div class="col s12 m12">
+          <div class="icon-block">
+            <h2 class="center light-blue-text"><i class="material-icons">settings</i></h2>
+            <h5 class="center">The Combined Approach</h5>
 
-            httpRequest2.open("GET", constellationSource);
-            httpRequest2.send();
+            <p class="light center">Combining the above approaches, we balance out the trade-off between performance and visual appeal.</p>
 
-            raycaster = new THREE.Raycaster();
-            renderer = new THREE.WebGLRenderer();
-            renderer.setClearColor( 0x000 ); // black background
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            container.appendChild( renderer.domElement );
+             <div class="row center">
+              <img src="images/demo/version3.png" width="100%">
+            <a href="version3.html">Visit Combined Version</a>
+          </div>
 
-            // Lights
-            var light = new THREE.PointLight('#FFFFFF', 1.5);
-            light.position.set(0, 0, 0.3);
-            scene.add(light);
-            var ambient = new THREE.AmbientLight('#292725');
-            scene.add(ambient);
+          </div>
 
-            // Universe Sphere
-            var sphereGeom =  new THREE.SphereGeometry(9000000, 32, 16);
-            var texture = THREE.ImageUtils.loadTexture( "images/milkyway_pan.jpg" );
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.minFilter = THREE.NearestFilter;
-            var material = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: false,
-                side: THREE.BackSide
-            });
-            universe = new THREE.Mesh(sphereGeom.clone(), material);
-            universe.position.set(0, 0, 0);
-            objectGroup.add(universe);
+        </div>
+      </div>
+
+    </div>
+    <br><br>
+
+    <div class="section">
+      <div class="row center">
+        <a href="https://goo.gl/GVbuob"><h5 class="header col s12 light">Visit Research Paper: https://goo.gl/GVbuob</h5></a>
+      </div>
+    </div>
+
+  </div>
 
 
-            stats = new Stats();
-            stats.domElement.style.position = 'absolute';
-            stats.domElement.style.bottom = '0px';
-            container.appendChild( stats.domElement );
-
-            // EVENTS
-            window.addEventListener( 'resize', onWindowResize, false );
-            document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-
-            // CONTROLS
-            cameraControls = new THREE.OrbitControls( camera );
-            cameraControls.target.set( 0, 0, 0 );
-            scene.add(objectGroup);
 
 
-        }
+  <!--  Scripts-->
+  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  
 
-        function removebg(cm){
-            console.log(cm)
-            switch(cm) {
-                case 1:{objectGroup.add(universe);$("#rm1").disabled=true;$("#rm2").disabled=false;}break;
-                case 2:{objectGroup.remove(universe);$("#rm2").disabled=true;$("#rm1").disabled=false;}break;
-                case 3:{objectGroup.add(connector);$("#rm3").disabled=true;$("#rm4").disabled=false;Markers.showMarkers();render();}break;
-                case 4:{objectGroup.remove(connector);$("#rm4").disabled=true;$("#rm3").disabled=false;Markers.hideMarkers();render();}break;
-                case 5:{objectGroup.add(particles);$("#rm5").disabled=true;$("#rm6").disabled=false;}break;
-                case 6:{objectGroup.remove(particles);$("#rm6").disabled=true;$("#rm5").disabled=false;}break;
-            }
-            
-        }
-        function onWindowResize() {
-
-            windowHalfX = window.innerWidth / 2;
-            windowHalfY = window.innerHeight / 2;
-
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-
-            renderer.setSize( window.innerWidth, window.innerHeight );
-
-        }
-
-        function onDocumentMouseMove( event ) {
-
-            event.preventDefault();
-
-            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
-        }
-
-        function render() {
-            requestAnimationFrame(render);
-            renderer.render(scene, camera);
-
-
-            renderer.render( scene, camera );
-
-            updateMarkers(Markers.markers, camera);
-            stats.update();
-
-        }
-    </script>
-
-    <script type="x-shader/x-vertex" id="vertexshader">
-        uniform vec3 color;
-        uniform float luminosity
-        varying vec3 vColor;
-        varying float vDist;
-        varying float vLum;
-
-        void main() {
-            vColor = color;
-            vDist = distance(modelViewMatrix*currpos, vec4(0.0, 0.0, 0.0, 1.0)) / 30000.0;
-            vLum = luminosity / 70.0;
-            gl_PointSize = 1.0 + (10.0 * vLum / vDist); //size of the star
-
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-
-        }
-    </script>
-
-    <script type="x-shader/x-fragment" id="fragmentshader">
-        uniform float cutoff;
-        varying vec3 vColor;
-        varying float vDist;
-        varying float vLum;
-
-        void main() {
-            float radius = distance( vec2(0.5,0.5), gl_PointCoord );
-            if ( radius > 0.5 ) {
-                discard;
-            }
-            float intensity = 1.0 + vLum - vDist;
-            if( radius < cutoff){
-                gl_FragColor = vec4( vec3(1.0,1.0,1.0) * intensity, 1.0);
-            } else {
-                float alpha = 1.0 - min( (radius-cutoff)*(1.0/(0.5-cutoff)), 1.0);
-                gl_FragColor = vec4( vColor*intensity, alpha);
-            }
-        }
-    </script>
-
-</body>
+  </body>
 </html>

@@ -38,6 +38,7 @@ function loadStarSurfaceTextures(){
 }
 
 var surfaceGeo = new THREE.SphereGeometry( 7.35144, 60, 30);
+
 function makeStarSurface( radius, uniforms ){
 	var sunShaderMaterial = new THREE.ShaderMaterial( {
 		uniforms: 		uniforms,
